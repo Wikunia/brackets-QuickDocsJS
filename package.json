@@ -1,0 +1,9 @@
+{
+    "name": "quickdocsjs",
+    "title": "QuickDocsJS",
+    "author": "Ole Kröger",
+    "homepage": "https://github.com/Wikunia/brackets-QuickDocsJS",
+    "version": "1.0.0",
+    "engines": { "brackets": ">=0.23" },
+    "description": "Inline short documentation for JavaScript functions, including a summary,syntax and parameters."
+}
