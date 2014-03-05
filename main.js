@@ -54,6 +54,10 @@ define(function(require, exports, module) {
                     var tags = getTags(func,"Math");
                      func_class = "Global_Objects/Math";
                     break;
+                case "RegExp.": // RegExp functions
+                    var tags = getTags(func,"RegExp");
+                     func_class = "Global_Objects/RegExp";
+                    break;
                 default:
                     var tags = getTags(func,"Statements"); 
                     func_class = "Statements";
@@ -149,6 +153,9 @@ define(function(require, exports, module) {
                 func.type = ".";   
                 if (line_begin_rev.substr(b,5) == ".htaM") { // Math. reverse
                     func.type = "Math.";
+                }
+                if (line_begin_rev.substr(b,7) == ".pxEgeR") { // RegExp. reverse
+                    func.type = "RegExp.";
                 }
             } else {
                 // some function names have different options
