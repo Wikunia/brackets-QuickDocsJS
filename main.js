@@ -43,12 +43,22 @@ define(function(require, exports, module) {
             
             switch(func.type) {
                 case ".": // string or Array
-                    var tags = getTags(func,"String");
-                    func_class = "Global_Objects/String";
-                    if (!tags) { // try array functions
-                        var tags = getTags(func,"Array");
-                        func_class = "Global_Objects/Array";
-                    } 
+                    // if variable type is unknown
+                    if (func.variable_type == 'unknown') { 
+                        var tags = getTags(func,"String");
+                        func_class = "Global_Objects/String";
+                        if (!tags) { // try array functions
+                            var tags = getTags(func,"Array");
+                            func_class = "Global_Objects/Array";
+                        } 
+                        if (!tags) { // try RegExp functions
+                            var tags = getTags(func,"RegExp");
+                            func_class = "Global_Objects/RegExp";
+                        }
+                    } else { // if variable type is defined
+                        var tags = getTags(func,func.variable_type);
+                        func_class = "Global_Objects/"+func.variable_type;
+                    }
                     break;
                 case "Math.": // Math functions
                     var tags = getTags(func,"Math");
@@ -64,7 +74,7 @@ define(function(require, exports, module) {
                     if (!tags) {
                         var tags = getTags(func,"global");
                         func_class = "Global_Objects";
-                    }    
+                    }
             }
                 
             // if tags are available 
@@ -149,13 +159,60 @@ define(function(require, exports, module) {
         if (no_function_chars.indexOf(line_begin_rev.substr(b,1)) === -1 || b == line_begin_rev.length) {
             var func = new Object();
             func.name = line.substr(pos.ch-b,b+e);
+            // check if function is like abc.substr or only like eval (no point)
             if (line_begin_rev.substr(b,1) == ".") {
                 func.type = ".";   
                 if (line_begin_rev.substr(b,5) == ".htaM") { // Math. reverse
                     func.type = "Math.";
                 }
-                if (line_begin_rev.substr(b,7) == ".pxEgeR") { // RegExp. reverse
+                if (line_begin_rev.substr(b,7).search(/\.'(g|m|i|y){0,4}\//) !== -1) { // regex with g,m,i,y flags reverse
                     func.type = "RegExp.";
+                }
+                // if it is no Math or RegExp function => try to get the type
+                if (func.type == ".") {
+                    // get the variable name (i.e strname.indexOf => variable name = "strname")
+                    // characters which can't be part of a variable name
+                    var no_variable_chars = ' =,+-(';
+                    var v = b+1;
+                    while (no_variable_chars.indexOf(line_begin_rev.substr(v,1).toLowerCase()) === -1 && v < line_begin_rev.length) {
+                        if (line_begin_rev.substr(v,1).toLowerCase() == ')') {
+                            no_variable_chars = ''; // inside brackets everything is possible :D 
+                        }
+                        if (line_begin_rev.substr(v,1).toLowerCase() == '(') {
+                            no_variable_chars = ' =,+-('; // old no_variable_chars
+                        }
+                        v++;
+                    }
+                    // func.variable could look like abc.substr(0,1) if the function was abc.substr(0,1).indexOf('') 
+                    func.variable = line.substr(pos.ch-v,v-b-1);
+                    // console.log('func.variable1: ' + func.variable);
+                    // delete function names inside func.variables
+                    // split variable into parts
+                    var func_variable_parts = func.variable.split(".");
+                    // the first part can't be a function
+                    func.variable = func_variable_parts[0];
+                    // iterate through all other parts
+                    for (var i = 1; i < func_variable_parts.length; i++) {
+                        // if part has no parmaters and isn't 'lengt' => part of variable 
+                        if (func_variable_parts[i].indexOf('(') === -1 && func_variable_parts[i] !== "length") {
+                            func.variable += '.'+func_variable_parts[i];
+                        } else {
+                            // if part is function => next part must be a function as well
+                            break;
+                        }
+                    }
+                    // console.log('func.variable2: ' + func.variable);
+                    var var_param = func.variable.indexOf('[');
+                    // if variable is sth like abc[i] it can be an array or a string
+                    if (var_param !== -1) {
+                        // can be string and array
+                        func.variable_type = 'unknown';
+                    } else {
+                         // try to get the VariableType ('String','Array','RegExp','unknown'
+                        func.variable_type = getVariableType(content,func.variable);     
+                    }
+                   
+                    // console.log('func.variable_type: ' + func.variable_type);
                 }
             } else {
                 // some function names have different options
@@ -185,13 +242,71 @@ define(function(require, exports, module) {
         return null;
     }
     
+    // returns unknown,String,Array or RegExp
+    function getVariableType (content, variable) {
+        // get the declaration for this variable
+        var regex = new RegExp('var\\s(.*?)'+variable+'\\s(.*?)=');
+        // console.log(regex);
+        var pos = content.search(regex);
+        // if the declaration is not available in this content
+        if (pos === -1) { return 'unknown'; }
+        // get declaration value
+        var value = content.substring(pos,content.indexOf(";",pos));
+        value = value.substr(value.indexOf('=')+1).trim();
+        // split the declaration into parts
+        var value_parts = value.split(".");
+        // if the declaration is like variablename.function[.function,...]
+        if (value_parts.length >= 2) {
+            // iterate through the parts starting with the functions
+            for (var i = 1; i < value_parts.length; i++) {
+                // get positon of the parameter part for this function
+                var func_param_pos = value_parts[i].indexOf('(');
+                // if the function has parameter => get function name
+                if (func_param_pos !== -1) {
+                    var func = value_parts[i].substr(0,func_param_pos);
+                } else {
+                    var func = value_parts[i];   
+                }
+                // all functions that outputs a string
+                var makes_string = ',substr,substring,search,concat,replace,trim,big,blink,bold,';
+                makes_string += 'fixed,fontcolor,fontsize,italics,link,small,strike,sub,sup,join,pop,push,';
+                if (makes_string.indexOf(','+func+',') !== -1) {
+                    return 'String';
+                }
+                // all functions that outputs an array
+                if (',split,reverse,sort,map,'.indexOf(','+func+',') !== -1) {
+                    return 'Array';
+                }
+            }
+        } else { // if the declaration has no function parts
+            if (value.indexOf('new Array') !== -1) {
+                return 'Array';   
+            }
+            if (value.indexOf('new RegExp') !== -1) {
+                return 'RegExp';   
+            }
+            // checks '/anc/flags' and "/anc/flags" => RegExp
+            var regex_end = new RegExp("\/(g|m|i|y){0,4}'");
+            var regex_end2 = new RegExp('\/(g|m|i|y){0,4}"');
+            if ((value.substr(0,2) == "'/" && value.substr(-6,6).search(regex_end) !== -1) ||
+               (value.substr(0,2) == '"/' && value.substr(-6,6).search(regex_end2) !== -1)) {
+                return 'RegExp';
+            }
+            
+            // checks 'str' and "str"
+            if ((value.substr(0,1) == "'" && value.substr(-1,1) == "'") || (value.substr(0,1) == '"' && value.substr(-1,1) == '"')) {
+                return 'String';
+            }
+        }
+        return 'unknown';                                     
+    }
     
     // reverse a string
     function reverse(s){
         return s.split("").reverse().join("");
     }
     
-    
+
     
     EditorManager.registerInlineDocsProvider(inlineProvider); 
 });
