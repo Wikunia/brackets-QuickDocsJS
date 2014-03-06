@@ -82,6 +82,8 @@ define(function(require, exports, module) {
                 if (tags.s != "" || tags.p) {
                     var summary = tags.s;
                     var syntax = tags.y.replace(/\n/g,'<br>');
+                    // indent code if it has space(s) at the beginning of the line
+                    syntax = syntax.replace(/<br>\s(.*?).(.*?)(<br>|$)/g,'<br><p style="text-indent:5px;">$2</p><br>');
         
                     // check if function has parameters
                     if (tags.p) { 
