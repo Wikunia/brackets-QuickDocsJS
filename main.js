@@ -279,7 +279,8 @@ define(function(require, exports, module) {
                 }
             }
         } else { // if the declaration has no function parts
-            if (value.indexOf('new Array') !== -1) {
+            // array can be declared with new Array or []
+            if (value.indexOf('new Array') !== -1 || (value.substr(0,1) == '[' && value.substr(-1,1) == ']') ) {
                 return 'Array';   
             }
             if (value.indexOf('new RegExp') !== -1) {
