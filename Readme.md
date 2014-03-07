@@ -8,6 +8,11 @@ You can use the Navigation menu or ```Ctrl+K```, while your cursor is on a JavaS
 
 This extension uses the documentation from [http://developer.mozilla.org](developer.mozilla.org).
 
+## v 1.2
+It's now possible to get documentations for your own functions using JavaDoc.
+
+![User functions](image/user_func.png?raw=true)
+
 ##Languages
 + English
 

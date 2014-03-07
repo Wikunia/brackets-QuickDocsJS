@@ -2,8 +2,8 @@
     <div class="css-prop-summary">
         <h1>{{propName}}</h1>
         <div>{{{summary}}}</div>
-        <br>
-        <code>{{{syntax}}}</code>
+        <code style="{{SyntaxStyle}}"><br>{{{syntax}}}</code>
+        <div style="{{ReturnStyle}}"><br>{{{return_val}}}</div>
     </div>
     <div class="divider-holder no-focus">
         <div class="divider"></div>
@@ -19,8 +19,10 @@
         </div>
     </div>
     <div class="content-bottom"></div>
+    <div class="bottom-links" style="{{BottomStyle}}">
     <a class="more-info" href="{{url}}" title="{{url}}">{{Strings.DOCS_MORE_LINK}}</a>
     <a class="js-info" href="https://developer.mozilla.org/" title="">mozilla.org</a>
     <a class="license-js-info" href="https://developer.mozilla.org/en-US/docs/MDN/About#Copyrights_and_licenses" title="License">Creative Commons License</a>
+    </div>
     
 </div>

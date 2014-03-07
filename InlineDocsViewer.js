@@ -50,7 +50,7 @@ define(function (require, exports, module) {
     
     /**
      * @param {!string} jsPropName
-     * @param {!{SUMMARY:string, SYNTAX:string, URL:string, VALUES:Array.<{TITLE:string, DESCRIPTION:string}>}} jsPropDetails
+     * @param {!{SUMMARY:string, SYNTAX:string, RETURN:string, URL:string, VALUES:Array.<{TITLE:string, DESCRIPTION:string}>}} jsPropDetails
      */
     function InlineDocsViewer(jsPropName, jsPropDetails) {
         InlineWidget.call(this);
@@ -60,12 +60,27 @@ define(function (require, exports, module) {
             return { value: valueInfo.t, description: valueInfo.d };
         });
         
+        var bottom_style = '', syntax_style = '', return_style = '';
+        if (!jsPropDetails.URL) {
+            bottom_style = 'display: none;';
+        }
+        if (!jsPropDetails.SYNTAX) {
+            syntax_style = 'display: none;';
+        }
+        if (!jsPropDetails.RETURN) {
+            return_style = 'display: none;';
+        }
+        
         var templateVars = {
             propName    : jsPropName,
             summary     : jsPropDetails.SUMMARY,
             syntax      : jsPropDetails.SYNTAX,
+            return_val  : jsPropDetails.RETURN,
             propValues  : propValues,
             url         : jsPropDetails.URL,
+            BottomStyle : bottom_style,
+            SyntaxStyle : syntax_style,
+            ReturnStyle : return_style,
             Strings     : Strings
         };
         

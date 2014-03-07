@@ -77,14 +77,22 @@ define(function(require, exports, module) {
                     }
             }
                 
-            // if tags are available 
+            // if tags for JS functions aren't available 
+            if (!tags) {
+                if (!func.type) {
+                    // => check current document for user defined function
+                    var tags = get_userdefined_tags(currentDoc,func);
+                    func_class = 'user_defined';
+                }
+            }
             if (tags) {
                 if (tags.s != "" || tags.p) {
                     var summary = tags.s;
                     var syntax = tags.y.replace(/\n/g,'<br>');
                     // indent code if it has space(s) at the beginning of the line
                     syntax = syntax.replace(/<br>\s(.*?).(.*?)(<br>|$)/g,'<br><p style="margin:0 auto; text-indent:2em;">$2</p>');
-        
+                    tags.r = tags.r ? '<b>Return</b><br>' + tags.r : ''; // empty string if tags.r isn't defined
+                    
                     // check if function has parameters
                     if (tags.p) { 
                         var parameters = tags.p;
@@ -93,12 +101,17 @@ define(function(require, exports, module) {
                     }
                     // if___else and some other functions back to if...elese
                     func.name = func.name.replace(/___/,'...');
-                    // generate url for read more
-                    url = func_class+'/'+func.name;
+                    
+                    // generate url for read more if func_class isn't user_defined
+                    if (func_class !== 'user_defined') {
+                        url = func_class+'/'+func.name;
+                    } else {
+                        url = null;
+                    }
                     
                     // console.log(syntax);
                     var result = new $.Deferred();
-                    var inlineWidget = new InlineDocsViewer(func.name,{SUMMARY:summary, SYNTAX: syntax, URL:url, VALUES:parameters});
+                    var inlineWidget = new InlineDocsViewer(func.name,{SUMMARY:summary, SYNTAX: syntax, RETURN: tags.r, URL:url, VALUES:parameters});
                     inlineWidget.load(hostEditor);
                     result.resolve(inlineWidget);
                     return result.promise();
@@ -108,6 +121,12 @@ define(function(require, exports, module) {
         return null;
     }
     
+    /**
+    * Read the type.json file and return tags
+    * @param func function name
+    * @param type function type ('String','Array','Math','RegExp','global','Statements')
+    * @return tags if the function exists, null otherwiese
+    */
     function getTags(func,type) {
         // Initialize the Ajax request
         var xhr = new XMLHttpRequest();
@@ -122,6 +141,7 @@ define(function(require, exports, module) {
             // function information is available
             var tags = JSON.parse(xhr.responseText);
             tags = eval('tags.'+func.name);
+            
             // if the function exists
             if (tags) {
                 return tags;
@@ -131,6 +151,12 @@ define(function(require, exports, module) {
         return null;
     }
     
+    /**
+        Gets the function name and the type of the function
+        @param content content of document
+        @param pos cursor position
+        @return object (func.name,func.type,func.variable,func.variable_type)
+    */
     function get_func_name(content,pos) {
         // get the content of each line
         var lines = content.split("\n");
@@ -141,7 +167,7 @@ define(function(require, exports, module) {
         // get string before current position
         var line_begin = line.substr(0,pos.ch);
         // reverse the string before current position
-        var line_begin_rev = reverse(line_begin);
+        var line_begin_rev = reverse_str(line_begin);
         
         
         // characters which can be part of a function name
@@ -245,7 +271,12 @@ define(function(require, exports, module) {
         return null;
     }
     
-    // returns unknown,String,Array or RegExp
+    /**
+        get the type of a variable
+        @param content content of document
+        @param variable name of the variable
+        @return type of the variable: unknown,String,Array or RegExp
+    */
     function getVariableType (content, variable) {
         // get the declaration for this variable
         var regex = new RegExp('var\\s(.*?)'+variable+'\\s(.*?)=');
@@ -277,7 +308,7 @@ define(function(require, exports, module) {
                     return 'String';
                 }
                 // all functions that outputs an array
-                if (',split,reverse,sort,map,'.indexOf(','+func+',') !== -1) {
+                if (',split,match,reverse,sort,map,'.indexOf(','+func+',') !== -1) {
                     return 'Array';
                 }
             }
@@ -305,8 +336,75 @@ define(function(require, exports, module) {
         return 'unknown';                                     
     }
     
-    // reverse a string
-    function reverse(s){
+    /**
+    * user defined functions can documentated with JavaDoc
+    * @param content    content of document
+    * @param func       function (includs func.name)
+    * @return tags object
+    */
+    function get_userdefined_tags(content,func) {
+        var tags = new Object();
+        var regex = /\/\*\*( *?)\n([\s\S]*?)\*\/\n( *?)function(.*?)\{/gmi; // global,multiline,insensitive
+        
+        var matches = null;
+        while (matches = regex.exec(content)) {
+            // matches[0] = all
+            // matches[1] = whitespace
+            // matches[2] = inside /** */ 
+            // matches[3] = whitespace before function
+            // macthes[4] = function name
+            // get the function name
+            var match_func = matches[4].substr(0,matches[4].indexOf('(')).trim();
+        
+            if (match_func === func.name) {
+                var lines = matches[0].split('\n');
+        
+                // until the first @ it's description 
+                // afterwards the description can't start again
+                var canbe_des = true; // can be description
+                var params = [];
+                // first line is /**, and last two ones are */ \n function
+                for (var i = 1; i < lines.length-2; i++) {
+                    lines[i] = lines[i].trim(); // trim each line
+                    lines[i] = lines[i].replace(/^\*/,'').trim(); // delete * at the beginning and trim line again
+                    
+                    // no @ => decription part 
+                    if (lines[i].substr(0,1) !== '@' && canbe_des) {
+                        if (tags.s && lines[i]) {
+                            tags.s += ' ' + lines[i]; // add to summary part
+                        } else if (!tags.s) {
+                            tags.s = lines[i];
+                        }
+                    }
+                    tags.y = ''; // syntax is empty for this
+                    
+                    // get params
+                    if (lines[i].substr(0,6) === '@param') {
+                        canbe_des = false; // description tag closed
+                        var param_parts = lines[i].split(/(\s+)/);
+                        // 0 = @param, 1 = ' ', 2 = title, 3 = ' ', 4-... = description
+                        var description = param_parts[4];
+                        for (var j = 5; j < param_parts.length; j++) {
+                            description += param_parts[j];
+                        }
+                        params.push({'t':param_parts[2],'d':description});
+                    }
+                    if (lines[i].substr(0,7) === '@return') {
+                        tags.r = lines[i].substr(7).trim(); // delete @return and trim
+                    }
+                }
+                tags.p = params;
+                return tags;
+            }
+         }
+        return null;   
+    }
+   
+    
+    /**
+        reverse a string
+    */
+    function reverse_str(s){
         return s.split("").reverse().join("");
     }
     
