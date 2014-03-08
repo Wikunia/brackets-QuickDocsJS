@@ -344,17 +344,18 @@ define(function(require, exports, module) {
     */
     function get_userdefined_tags(content,func) {
         var tags = new Object();
-        var regex = /\/\*\*( *?)\n([\s\S]*?)\*\/\n( *?)function(.*?)\{/gmi; // global,multiline,insensitive
-        
+        var regex = /\/\*\*( *?)\n([\s\S]*?)\*\/( *?)\n( *?)function(.*?)\{/gmi; // global,multiline,insensitive
+
         var matches = null;
         while (matches = regex.exec(content)) {
             // matches[0] = all
             // matches[1] = whitespace
             // matches[2] = inside /** */ 
-            // matches[3] = whitespace before function
-            // macthes[4] = function name
+            // matches[3] = whitespace before \n
+            // matches[4] = whitespace before function
+            // macthes[5] = function name
             // get the function name
-            var match_func = matches[4].substr(0,matches[4].indexOf('(')).trim();
+            var match_func = matches[5].substr(0,matches[5].indexOf('(')).trim();
         
             if (match_func === func.name) {
                 var lines = matches[0].split('\n');
