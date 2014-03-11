@@ -278,15 +278,25 @@ define(function(require, exports, module) {
         @return type of the variable: unknown,String,Array or RegExp
     */
     function getVariableType (content, variable) {
-        // get the declaration for this variable
-        var regex = new RegExp('var\\s(.*?)'+variable+'\\s(.*?)=');
-        // console.log(regex);
-        var pos = content.search(regex);
-        // if the declaration is not available in this content
-        if (pos === -1) { return 'unknown'; }
+        // get the declaration for this variable 
+        // can be a ',' between two declarations
+        var regex = new RegExp('var [^;]*?' + variable + '\\s*?=','');
+        var match = regex.exec(content);
+     
+        if (match) {
+            var pos = match.index;
+            // length of the match
+            var match_len = match[0].length;
+        } else {
+            // if the declaration is not available in this content
+            return 'unknown';   
+        }
+        
+    
         // get declaration value
-        var value = content.substring(pos,content.indexOf(";",pos));
-        value = value.substr(value.indexOf('=')+1).trim();
+        // substr(pos).search(regex)+pos = indexOf(regex,pos)
+        var value = content.substr(pos+match_len,content.substr(pos+match_len).search(/[;,]/));
+        value = value.trim();
         // split the declaration into parts
         var value_parts = value.split(".");
         // if the declaration is like variablename.function[.function,...]
@@ -344,18 +354,14 @@ define(function(require, exports, module) {
     */
     function get_userdefined_tags(content,func) {
         var tags = new Object();
-        var regex = /\/\*\*( *?)\n([\s\S]*?)\*\/( *?)\n( *?)function(.*?)\{/gmi; // global,multiline,insensitive
+        var regex = /\/\*\*(?: *?)\n(?:[\s\S]*?)\*\/(?: *?)\n(?: *?)function(.*?)\{/gmi; // global,multiline,insensitive
 
         var matches = null;
         while (matches = regex.exec(content)) {
             // matches[0] = all
-            // matches[1] = whitespace
-            // matches[2] = inside /** */ 
-            // matches[3] = whitespace before \n
-            // matches[4] = whitespace before function
-            // macthes[5] = function name
+            // macthes[1] = function name
             // get the function name
-            var match_func = matches[5].substr(0,matches[5].indexOf('(')).trim();
+            var match_func = matches[1].substr(0,matches[1].indexOf('(')).trim();
         
             if (match_func === func.name) {
                 var lines = matches[0].split('\n');

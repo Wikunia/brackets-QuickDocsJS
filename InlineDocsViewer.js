@@ -61,6 +61,7 @@ define(function (require, exports, module) {
         });
         
         var bottom_style = '', syntax_style = '', return_style = '';
+        
         if (!jsPropDetails.URL) {
             bottom_style = 'display: none;';
         }
@@ -70,6 +71,7 @@ define(function (require, exports, module) {
         if (!jsPropDetails.RETURN) {
             return_style = 'display: none;';
         }
+       
         
         var templateVars = {
             propName    : jsPropName,
