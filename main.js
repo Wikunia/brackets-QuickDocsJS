@@ -123,8 +123,8 @@ define(function(require, exports, module) {
     
     /**
     * Read the type.json file and return tags
-    * @param func function name
-    * @param type function type ('String','Array','Math','RegExp','global','Statements')
+    * @param func {string} function name
+    * @param type {string} function type ('String','Array','Math','RegExp','global','Statements')
     * @return tags if the function exists, null otherwiese
     */
     function getTags(func,type) {
@@ -153,8 +153,8 @@ define(function(require, exports, module) {
     
     /**
         Gets the function name and the type of the function
-        @param content content of document
-        @param pos cursor position
+        @param content  {string} content of document
+        @param pos      {Object} cursor position (pos.ch and pos.line)
         @return object (func.name,func.type,func.variable,func.variable_type)
     */
     function get_func_name(content,pos) {
@@ -241,7 +241,7 @@ define(function(require, exports, module) {
                         func.variable_type = getVariableType(content,func.variable);     
                     }
                    
-                    // console.log('func.variable_type: ' + func.variable_type);
+                    //console.log('func.variable_type: ' + func.variable_type);
                 }
             } else {
                 // some function names have different options
@@ -273,8 +273,8 @@ define(function(require, exports, module) {
     
     /**
         get the type of a variable
-        @param content content of document
-        @param variable name of the variable
+        @param content  {string} content of document
+        @param variable {string} name of the variable
         @return type of the variable: unknown,String,Array or RegExp
     */
     function getVariableType (content, variable) {
@@ -348,8 +348,8 @@ define(function(require, exports, module) {
     
     /**
     * user defined functions can documentated with JavaDoc
-    * @param content    content of document
-    * @param func       function (includs func.name)
+    * @param content    {string}    content of document
+    * @param func       {object}       function (includs func.name)
     * @return tags object
     */
     function get_userdefined_tags(content,func) {
@@ -388,13 +388,24 @@ define(function(require, exports, module) {
                     // get params
                     if (lines[i].substr(0,6) === '@param') {
                         canbe_des = false; // description tag closed
-                        var param_parts = lines[i].split(/(\s+)/);
-                        // 0 = @param, 1 = ' ', 2 = title, 3 = ' ', 4-... = description
-                        var description = param_parts[4];
-                        for (var j = 5; j < param_parts.length; j++) {
-                            description += param_parts[j];
+                        var param_parts = lines[i].split(/(?:\s+)/);
+                       
+                        // 0 = @param, 1 = title, 2-... = description
+                        // 2 can be the type (inside {})
+                        if (param_parts[2].substr(0,1) == '{' && param_parts[2].substr(-1) == '}') {
+                            // type is part of the title
+                            var param_title = param_parts[1] + ' ' + param_parts[2]; 
+                            var description = param_parts[3];
+                            var j_start = 4;
+                        } else {
+                            var param_title = param_parts[1]; 
+                            var description = param_parts[2];
+                            var j_start = 3;
                         }
-                        params.push({'t':param_parts[2],'d':description});
+                        for (var j = j_start; j < param_parts.length; j++) {
+                            description += ' ' + param_parts[j];
+                        }
+                        params.push({'t':param_title,'d':description});
                     }
                     if (lines[i].substr(0,7) === '@return') {
                         tags.r = lines[i].substr(7).trim(); // delete @return and trim

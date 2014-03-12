@@ -10,7 +10,7 @@
 
 
 /* Overall inline widget content container */
-.css-prop-defn {
+.js-prop-defn {
     margin-left: 20px;
     
     color: @body-text-color;
@@ -27,7 +27,7 @@
     &:focus {
         outline: none;
     }
-    
+
     font-family: SourceSansPro;
     font-size: 14px;
     
@@ -58,7 +58,7 @@
 }
 
 /* Left-hand column */
-.css-prop-summary {
+.js-prop-summary {
     box-sizing: border-box;
     float: left;
     padding-left: 20px;
@@ -77,7 +77,7 @@
 @scrollbar-wid: 17px;
 
 /* Right-hand column */
-.css-prop-values {
+.js-prop-values {
     box-sizing: border-box; //for exact dimension        
     float: right;
     width: 60%;
@@ -136,7 +136,7 @@
 }
 
 .content-bottom {
-    // Used to pull bottom edge of .css-prop-defn down below its two floated children.
+    // Used to pull bottom edge of .js-prop-defn down below its two floated children.
     // Also prevents .more-info (after us in DOM order) from overlapping the float: right content.
     clear: both;
 }

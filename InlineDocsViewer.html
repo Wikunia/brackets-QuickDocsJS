@@ -1,5 +1,5 @@
-<div class="css-prop-defn" tabIndex="0"> <!-- tabIndex needed: otherwise click focuses CodeMirror scroller and Esc won't work -->
-    <div class="css-prop-summary">
+<div class="js-prop-defn" tabIndex="0"> <!-- tabIndex needed: otherwise click focuses CodeMirror scroller and Esc won't work -->
+    <div class="js-prop-summary">
         <h1>{{propName}}</h1>
         <div>{{{summary}}}</div>
         <code style="{{SyntaxStyle}}"><br>{{{syntax}}}</code>
@@ -8,14 +8,14 @@
     <div class="divider-holder no-focus">
         <div class="divider"></div>
     </div>
-    <div class="css-prop-values quiet-scrollbars">
+    <div class="js-prop-values quiet-scrollbars">
         <div class="scroller" tabIndex="0"> <!-- tabIndex needed: otherwise can't be focused on open or via click -->
+             {{#propValues}}
             <dl>
-                {{#propValues}}
                 <dt>{{value}}</dt>
                 <dd>{{{description}}}</dd>
-                {{/propValues}}
             </dl>
+            {{/propValues}}
         </div>
     </div>
     <div class="content-bottom"></div>
