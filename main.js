@@ -183,11 +183,53 @@ define(function(require, exports, module) {
             b++;
         }
         
+        var func_start_pos = pos.ch-b;
+        var func_name_length = b+e;
+        
+        console.log(line_after.substr(e,1));
+        // if the cursor is not on the function name but on the part before the dot
+        if (line_after.substr(e,1) === "[") {
+            while (line_after.substr(e,1) !== ']') {
+                e++;   
+            }
+            // not matching the ] but the char afterwards
+            e++;
+        }
+        
+        
+        // Check if a dot is after the function name
+        if (line_after.substr(e,1) === ".") {
+            e++;
+            // new start position
+            func_start_pos = e+pos.ch;
+            
+            
+            line_after = line.substr(e+pos.ch);
+            // get string before current position
+            line_begin = line.substr(0,e+pos.ch);
+            // reverse the string before current position
+            line_begin_rev = reverse_str(line_begin);
+            
+            console.log(line_after);
+            console.log(line_begin);
+            e = 0;
+            while (function_chars.indexOf(line_after.substr(e,1).toLowerCase()) !== -1 && e < line_after.length) {
+                e++;
+            }
+            // new function length
+            func_name_length = e;
+            b = 0;
+        }
+        
+        
         // characters which can't be directly before the function_name
         var no_function_chars = '0123456789$';
         if (no_function_chars.indexOf(line_begin_rev.substr(b,1)) === -1 || b == line_begin_rev.length) {
             var func = new Object();
-            func.name = line.substr(pos.ch-b,b+e);
+            func.name = line.substr(func_start_pos,func_name_length);
+            console.log(func);
+            console.log('b: ' + b + ' e: ' + e);
+            
             // check if function is like abc.substr or only like eval (no point)
             if (line_begin_rev.substr(b,1) == ".") {
                 func.type = ".";   
@@ -213,7 +255,7 @@ define(function(require, exports, module) {
                         v++;
                     }
                     // func.variable could look like abc.substr(0,1) if the function was abc.substr(0,1).indexOf('') 
-                    func.variable = line.substr(pos.ch-v,v-b-1);
+                    func.variable = line.substr(func_start_pos+b-v,v-b-1);
                     // console.log('func.variable1: ' + func.variable);
                     // delete function names inside func.variables
                     // split variable into parts
@@ -297,6 +339,7 @@ define(function(require, exports, module) {
         // substr(pos).search(regex)+pos = indexOf(regex,pos)
         var value = content.substr(pos+match_len,content.substr(pos+match_len).search(/[;,]/));
         value = value.trim();
+        
         // split the declaration into parts
         var value_parts = value.split(".");
         // if the declaration is like variablename.function[.function,...]
@@ -324,7 +367,7 @@ define(function(require, exports, module) {
             }
         } else { // if the declaration has no function parts
             // array can be declared with new Array or []
-            if (value.indexOf('new Array') !== -1 || (value.substr(0,1) == '[' && value.substr(-1,1) == ']') ) {
+            if (value.indexOf('new Array') !== -1 || (value.substr(0,1) == '[') ) {
                 return 'Array';   
             }
             if (value.indexOf('new RegExp') !== -1) {
@@ -426,7 +469,6 @@ define(function(require, exports, module) {
         return s.split("").reverse().join("");
     }
     
-
     
     EditorManager.registerInlineDocsProvider(inlineProvider); 
 });
