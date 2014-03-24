@@ -186,7 +186,7 @@ define(function(require, exports, module) {
         var func_start_pos = pos.ch-b;
         var func_name_length = b+e;
         
-        console.log(line_after.substr(e,1));
+        // console.log(line_after.substr(e,1));
         // if the cursor is not on the function name but on the part before the dot
         if (line_after.substr(e,1) === "[") {
             while (line_after.substr(e,1) !== ']') {
@@ -210,8 +210,8 @@ define(function(require, exports, module) {
             // reverse the string before current position
             line_begin_rev = reverse_str(line_begin);
             
-            console.log(line_after);
-            console.log(line_begin);
+            // console.log(line_after);
+            // console.log(line_begin);
             e = 0;
             while (function_chars.indexOf(line_after.substr(e,1).toLowerCase()) !== -1 && e < line_after.length) {
                 e++;
@@ -227,8 +227,8 @@ define(function(require, exports, module) {
         if (no_function_chars.indexOf(line_begin_rev.substr(b,1)) === -1 || b == line_begin_rev.length) {
             var func = new Object();
             func.name = line.substr(func_start_pos,func_name_length);
-            console.log(func);
-            console.log('b: ' + b + ' e: ' + e);
+            // console.log(func);
+            // console.log('b: ' + b + ' e: ' + e);
             
             // check if function is like abc.substr or only like eval (no point)
             if (line_begin_rev.substr(b,1) == ".") {
@@ -397,8 +397,8 @@ define(function(require, exports, module) {
     */
     function get_userdefined_tags(content,func) {
         var tags = new Object();
-        var regex = /\/\*\*(?: *?)\n(?:[\s\S]*?)\*\/(?: *?)\n(?: *?)function(.*?)\{/gmi; // global,multiline,insensitive
-
+        var regex = /\/\*\*(?:[ \t]*?)\n(?:[\s\S]*?)\*\/(?:[ \t]*?)\n(?:[ \t]*?)function(.*?)\{/gmi; // global,multiline,insensitive
+		
         var matches = null;
         while (matches = regex.exec(content)) {
             // matches[0] = all
