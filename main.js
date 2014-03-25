@@ -307,7 +307,12 @@ define(function(require, exports, module) {
                         break;
                 }
             }
-            return func;
+			// if func name starts with a letter
+			if (func.name.charAt(0).match(/[a-zA-Z]/)) {
+            	return func;
+			} else {
+				return null;
+			}
         }
         
         return null;
