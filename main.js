@@ -402,15 +402,22 @@ define(function(require, exports, module) {
     */
     function get_userdefined_tags(content,func) {
         var tags = new Object();
-        var regex = /\/\*\*(?:[ \t]*?)\n(?:[\s\S]*?)\*\/(?:[ \t]*?)\n(?:[ \t]*?)function(.*?)\{/gmi; // global,multiline,insensitive
-		
+        var regex = /\/\*\*(?:[ \t]*?)\n(?:[\s\S]*?)\*\/(?:[ \t]*?)\n(?:[ \t]*?)(.*?)(\n|$)/gmi; // global,multiline,insensitive
+
         var matches = null;
         while (matches = regex.exec(content)) {
             // matches[0] = all
-            // macthes[1] = function name
+            // macthes[1] = function '''function_name'''(
             // get the function name
-            var match_func = matches[1].substr(0,matches[1].indexOf('(')).trim();
-        
+			// start_pos
+			var start_func_name = matches[1].trim().indexOf("function ")+9;
+			if (start_func_name > 8) { // indexOf != -1
+				var match_func = matches[1].trim().substr(start_func_name);
+				var end_func_name = match_func.search(/(\(|$)/);
+				var match_func = match_func.substring(0,end_func_name);
+			} else {
+				match_func === "";	
+			}
             if (match_func === func.name) {
                 var lines = matches[0].split('\n');
         
