@@ -402,25 +402,19 @@ define(function(require, exports, module) {
     */
     function get_userdefined_tags(content,func) {
         var tags = new Object();
-        var regex = /\/\*\*(?:[ \t]*?)\n(?:[\s\S]*?)\*\/(?:[ \t]*?)\n(?:[ \t]*?)(.*?)(\n|$)/gmi; // global,multiline,insensitive
+        var regex = /\/\*\*(?:[ \t]*)[\n\r](?:[\s\S]*?)\*\/(?:[ \t]*)[\n\r]*?(?:[ \t]*)function (.*?)(\n|\r|$)/gmi; // global,multiline,insensitive
 
         var matches = null;
         while (matches = regex.exec(content)) {
             // matches[0] = all
-            // macthes[1] = function '''function_name'''(
+             // matches[1] = '''function_name'''[ ](...
             // get the function name
 			// start_pos
-			var start_func_name = matches[1].trim().indexOf("function ")+9;
-			if (start_func_name > 8) { // indexOf != -1
-				var match_func = matches[1].trim().substr(start_func_name);
-				var end_func_name = match_func.search(/(\(|$)/);
-				var match_func = match_func.substring(0,end_func_name);
-			} else {
-				match_func === "";	
-			}
+			var match_func = matches[1].trim();
+			var end_func_name = match_func.search(/(\(|$)/);
+			var match_func = match_func.substring(0,end_func_name).trim();
             if (match_func === func.name) {
-                var lines = matches[0].split('\n');
-        
+                var lines = matches[0].split(/[\n\r]/);
                 // until the first @ it's description 
                 // afterwards the description can't start again
                 var canbe_des = true; // can be description
@@ -428,6 +422,7 @@ define(function(require, exports, module) {
                 // first line is /**, and last two ones are */ \n function
                 for (var i = 1; i < lines.length-2; i++) {
                     lines[i] = lines[i].trim(); // trim each line
+					if (lines[i].substr(0,2) == "*/") break;
                     lines[i] = lines[i].replace(/^\*/,'').trim(); // delete * at the beginning and trim line again
                     
                     // no @ => decription part 
