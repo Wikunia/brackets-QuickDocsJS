@@ -402,16 +402,24 @@ define(function(require, exports, module) {
     */
     function get_userdefined_tags(content,func) {
         var tags = new Object();
-        var regex = /\/\*\*(?:[ \t]*)[\n\r](?:[\s\S]*?)\*\/(?:[ \t]*)[\n\r]*?(?:[ \t]*)function (.*?)(\n|\r|$)/gmi; // global,multiline,insensitive
-
-        var matches = null;
+		// global,multiline,insensitive
+        var regex = /\/\*\*(?:[ \t]*)[\n\r](?:[\s\S]*?)\*\/(?:[ \t]*)[\n\r]*?(?:[ \t]*)(var (.*)=[ \(]*?function(.*)|function (.*?))(\n|\r|$)/gmi; 
+      
+		var matches = null;
+		
         while (matches = regex.exec(content)) {
             // matches[0] = all
-             // matches[1] = '''function_name'''[ ](...
+             // matches[2] = '''function_name''' or matches[4] if matches[2] undefined
             // get the function name
 			// start_pos
-			var match_func = matches[1].trim();
-			var end_func_name = match_func.search(/(\(|$)/);
+			if (matches[2]) {
+				var match_func = matches[2].trim();
+			} else if (matches[4]) {
+				var match_func = matches[4].trim();	
+			} else {
+				break;
+			}
+			var end_func_name = match_func.search(/( |\(|$)/);
 			var match_func = match_func.substring(0,end_func_name).trim();
             if (match_func === func.name) {
                 var lines = matches[0].split(/[\n\r]/);
