@@ -22,7 +22,7 @@ define(function(require, exports, module) {
         var langId = hostEditor.getLanguageForSelection().getId();
         
         // Only provide docs when cursor is in javascript content
-        if (langId !== "javascript") {
+        if (langId !== "javascript" && langId !== "coffeescript" && langId !== "livescript") {
             return null;
         }
         
