@@ -320,6 +320,7 @@ define(function(require, exports, module) {
     
     /**
         get the type of a variable
+		it's important for functions which exists for strings and arrays
         @param content  {string} content of document
         @param variable {string} name of the variable
         @return type of the variable: unknown,String,Array or RegExp
@@ -436,7 +437,7 @@ define(function(require, exports, module) {
                     // no @ => decription part 
                     if (lines[i].substr(0,1) !== '@' && canbe_des) {
                         if (tags.s && lines[i]) {
-                            tags.s += ' ' + lines[i]; // add to summary part
+                            tags.s += '<br>' + lines[i]; // add to summary part
                         } else if (!tags.s) {
                             tags.s = lines[i];
                         }
