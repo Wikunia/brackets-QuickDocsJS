@@ -397,7 +397,7 @@ define(function(require, exports, module) {
     
     /**
     * user defined functions can documentated with JavaDoc
-    * @param content    {string}    content of document
+    * @param content
     * @param func       {object}       function (includs func.name)
     * @return tags object
     */
@@ -451,19 +451,24 @@ define(function(require, exports, module) {
                        
                         // 0 = @param, 1 = title, 2-... = description
                         // 2 can be the type (inside {})
-                        if (param_parts[2].substr(0,1) == '{' && param_parts[2].substr(-1) == '}') {
-                            // type is part of the title
-                            var param_title = param_parts[1] + ' ' + param_parts[2]; 
-                            var description = param_parts[3];
-                            var j_start = 4;
-                        } else {
-                            var param_title = param_parts[1]; 
-                            var description = param_parts[2];
-                            var j_start = 3;
-                        }
-                        for (var j = j_start; j < param_parts.length; j++) {
-                            description += ' ' + param_parts[j];
-                        }
+						if (param_parts[2]) {
+							if (param_parts[2].substr(0,1) == '{' && param_parts[2].substr(-1) == '}') {
+								// type is part of the title
+								var param_title = param_parts[1] + ' ' + param_parts[2]; 
+								var description = param_parts[3];
+								var j_start = 4;
+							} else {
+								var param_title = param_parts[1]; 
+								var description = param_parts[2];
+								var j_start = 3;
+							}
+							for (var j = j_start; j < param_parts.length; j++) {
+								description += ' ' + param_parts[j];
+							}
+						} else {
+							var param_title = param_parts[1];
+							var description = '';	
+						}
                         params.push({'t':param_title,'d':description});
                     }
                     if (lines[i].substr(0,7) === '@return') {
