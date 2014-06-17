@@ -91,7 +91,7 @@ define(function(require, exports, module) {
                     var syntax = tags.y.replace(/\n/g,'<br>');
                     // indent code if it has space(s) at the beginning of the line
                     syntax = syntax.replace(/<br>\s(.*?).(.*?)(<br>|$)/g,'<br><p style="margin:0 auto; text-indent:2em;">$2</p>');
-                    tags.r = tags.r ? '<b>Return</b><br>' + tags.r : ''; // empty string if tags.r isn't defined
+
                     
                     // check if function has parameters
                     if (tags.p) { 
@@ -108,7 +108,16 @@ define(function(require, exports, module) {
                     } else {
                         url = null;
                     }
-                    
+
+					if (tags.r) {
+						if (typeof tags.r.d == 'undefined') {
+							tags.r = {d:tags.r,type:''};
+						}
+					} else {
+						tags.r = {};
+					}
+
+
                     // console.log(syntax);
                     var result = new $.Deferred();
                     var inlineWidget = new InlineDocsViewer(func.name,{SUMMARY:summary, SYNTAX: syntax, RETURN: tags.r, URL:url, VALUES:parameters});
@@ -395,7 +404,7 @@ define(function(require, exports, module) {
         return 'unknown';                                     
     }
     
-    /**
+   /**
     * user defined functions can documentated with JavaDoc
     * @param content
     * @param func       {object}       function (includs func.name)
@@ -448,18 +457,22 @@ define(function(require, exports, module) {
                     if (lines[i].substr(0,6) === '@param') {
                         canbe_des = false; // description tag closed
                         var param_parts = lines[i].split(/(?:\s+)/);
-                       
+                        var param_type = '';
+
                         // 0 = @param, 1 = title, 2-... = description
                         // 1,2 can be the type (inside {})
 						if (param_parts[2]) {
 							if (param_parts[1].substr(0,1) == '{' && param_parts[1].substr(-1) == '}') {
 								// type is part of the title
-								var param_title = param_parts[2] + ' ' + param_parts[1];
+								param_parts[1] = param_parts[1].substring(1,param_parts[1].length-1);
+								var param_title = param_parts[2];
+								param_type = param_parts[1];
 								var description = param_parts[3];
 								var j_start = 4;
 							} else 	if (param_parts[2].substr(0,1) == '{' && param_parts[2].substr(-1) == '}') {
 								// type is part of the title
-								var param_title = param_parts[1] + ' ' + param_parts[2]; 
+								var param_title = param_parts[1];
+								param_type = param_parts[2];
 								var description = param_parts[3];
 								var j_start = 4;
 							} else {
@@ -474,10 +487,20 @@ define(function(require, exports, module) {
 							var param_title = param_parts[1];
 							var description = '';	
 						}
-                        params.push({'t':param_title,'d':description});
+                        params.push({'t':param_title,'d':description,'type':param_type});
                     }
                     if (lines[i].substr(0,7) === '@return') {
-                        tags.r = lines[i].substr(7).trim(); // delete @return and trim
+						if (lines[i].substr(0,8) === '@returns') {
+							var  return_tag = lines[i].substr(8).trim(); // delete @return and trim
+						} else {
+                        	var  return_tag = lines[i].substr(7).trim(); // delete @return and trim
+						}
+						if(return_tag.charAt(0) == '{') {
+							var endCurly = return_tag.indexOf('}');
+							tags.r = {'d': return_tag.substr(endCurly+1),'type':return_tag.substring(1,endCurly)};
+						}else {
+							tags.r = return_tag;
+						}
                     }
                 }
                 tags.p = params;

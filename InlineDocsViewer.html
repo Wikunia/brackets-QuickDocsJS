@@ -3,7 +3,12 @@
         <h1>{{propName}}</h1>
         <div>{{{summary}}}</div>
         <code style="{{SyntaxStyle}}"><br>{{{syntax}}}</code>
-        <div style="{{ReturnStyle}}"><br>{{{return_val}}}</div>
+        <div style="{{ReturnStyle}}"><br>
+        {{#returnValues}}
+        	<b>Returns:</b> <br>
+        	<span class="paramtype">{{type}}</span><br>
+        	{{description}}
+        {{/returnValues}}</div>
     </div>
     <div class="divider-holder no-focus">
         <div class="divider"></div>
@@ -12,7 +17,7 @@
         <div class="scroller" tabIndex="0"> <!-- tabIndex needed: otherwise can't be focused on open or via click -->
              {{#propValues}}
             <dl>
-                <dt>{{value}}</dt>
+                <dt>{{value}} <span class="paramtype">{{type}}</span></dt>
                 <dd>{{{description}}}</dd>
             </dl>
             {{/propValues}}

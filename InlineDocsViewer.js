@@ -57,8 +57,10 @@ define(function (require, exports, module) {
         
         // valueInfo.t = title (.d = description)
         var propValues = jsPropDetails.VALUES.map(function (valueInfo) {
-            return { value: valueInfo.t, description: valueInfo.d };
+            return { value: valueInfo.t, description: valueInfo.d, type: valueInfo.type };
         });
+		var returnValues = [{description: jsPropDetails.RETURN.d, type: jsPropDetails.RETURN.type}];
+
         
         var bottom_style = '', syntax_style = '', return_style = '';
         
@@ -68,22 +70,23 @@ define(function (require, exports, module) {
         if (!jsPropDetails.SYNTAX) {
             syntax_style = 'display: none;';
         }
-        if (!jsPropDetails.RETURN) {
+
+        if (!returnValues[0].description && !returnValues[0].type) {
             return_style = 'display: none;';
         }
        
         
         var templateVars = {
-            propName    : jsPropName,
-            summary     : jsPropDetails.SUMMARY,
-            syntax      : jsPropDetails.SYNTAX,
-            return_val  : jsPropDetails.RETURN,
-            propValues  : propValues,
-            url         : jsPropDetails.URL,
-            BottomStyle : bottom_style,
-            SyntaxStyle : syntax_style,
-            ReturnStyle : return_style,
-            Strings     : Strings
+            propName      : jsPropName,
+            summary       : jsPropDetails.SUMMARY,
+            syntax        : jsPropDetails.SYNTAX,
+            returnValues  : returnValues,
+            propValues    : propValues,
+            url           : jsPropDetails.URL,
+            BottomStyle   : bottom_style,
+            SyntaxStyle   : syntax_style,
+            ReturnStyle   : return_style,
+            Strings       : Strings
         };
         
         var html = Mustache.render(inlineEditorTemplate, templateVars);
