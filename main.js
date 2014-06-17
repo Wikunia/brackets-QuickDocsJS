@@ -450,9 +450,14 @@ define(function(require, exports, module) {
                         var param_parts = lines[i].split(/(?:\s+)/);
                        
                         // 0 = @param, 1 = title, 2-... = description
-                        // 2 can be the type (inside {})
+                        // 1,2 can be the type (inside {})
 						if (param_parts[2]) {
-							if (param_parts[2].substr(0,1) == '{' && param_parts[2].substr(-1) == '}') {
+							if (param_parts[1].substr(0,1) == '{' && param_parts[1].substr(-1) == '}') {
+								// type is part of the title
+								var param_title = param_parts[2] + ' ' + param_parts[1];
+								var description = param_parts[3];
+								var j_start = 4;
+							} else 	if (param_parts[2].substr(0,1) == '{' && param_parts[2].substr(-1) == '}') {
 								// type is part of the title
 								var param_title = param_parts[1] + ' ' + param_parts[2]; 
 								var description = param_parts[3];
