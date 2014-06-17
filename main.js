@@ -404,7 +404,10 @@ define(function(require, exports, module) {
         return 'unknown';                                     
     }
     
-   /**
+
+
+
+	/**
     * user defined functions can documentated with JavaDoc
     * @param content
     * @param func       {object}       function (includs func.name)
@@ -464,13 +467,14 @@ define(function(require, exports, module) {
 						if (param_parts[2]) {
 							if (param_parts[1].substr(0,1) == '{' && param_parts[1].substr(-1) == '}') {
 								// type is part of the title
-								param_parts[1] = param_parts[1].substring(1,param_parts[1].length-1);
+								param_parts[1] = param_parts[1].substring(1,param_parts[1].length-1); // remove { }
 								var param_title = param_parts[2];
 								param_type = param_parts[1];
 								var description = param_parts[3];
 								var j_start = 4;
 							} else 	if (param_parts[2].substr(0,1) == '{' && param_parts[2].substr(-1) == '}') {
 								// type is part of the title
+								param_parts[2] = param_parts[2].substring(1,param_parts[2].length-1); // remove { }
 								var param_title = param_parts[1];
 								param_type = param_parts[2];
 								var description = param_parts[3];
