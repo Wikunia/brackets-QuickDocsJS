@@ -416,19 +416,21 @@ define(function(require, exports, module) {
     function get_userdefined_tags(content,func) {
         var tags = new Object();
 		// global,multiline,insensitive
-        var regex = /\/\*\*(?:[ \t]*)[\n\r](?:[\s\S]*?)\*\/(?:[ \t]*)[\n\r]*?(?:[ \t]*)(var (.*)=[ \(]*?function(.*)|function (.*?))(\n|\r|$)/gmi; 
+        var regex = /\/\*\*(?:[ \t]*)[\n\r](?:[\s\S]*?)\*\/(?:[ \t]*)[\n\r]*?(?:[ \t]*)(var (.*)=[ \(]*?function(.*)|function (.*?)|(.*?):\s*?function(.*?))(\n|\r|$)/gmi;
       
 		var matches = null;
-		
+
         while (matches = regex.exec(content)) {
             // matches[0] = all
-             // matches[2] = '''function_name''' or matches[4] if matches[2] undefined
+             // matches[2] = '''function_name''' or matches[4] if matches[2] undefined or matches[5] if both undefined
             // get the function name
 			// start_pos
 			if (matches[2]) {
 				var match_func = matches[2].trim();
 			} else if (matches[4]) {
 				var match_func = matches[4].trim();	
+			} else if (matches[5]) {
+				var match_func = matches[5].trim();
 			} else {
 				break;
 			}
