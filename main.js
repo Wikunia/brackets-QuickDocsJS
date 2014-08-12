@@ -36,7 +36,6 @@ define(function(require, exports, module) {
         
         // get func.name and func.type ('.' or 'Math.')
         var func = get_func_name(currentDoc,sel.start);
-        
         // if a function was selected
         if (func) {
             var func_class,url;          
@@ -55,7 +54,7 @@ define(function(require, exports, module) {
                             var tags = getTags(func,"RegExp");
                             func_class = "Global_Objects/RegExp";
                         }
-                    } else { // if variable type is defined
+                    } else if (func.variable_type != "this") { // if variable type is defined but not this
                         var tags = getTags(func,func.variable_type);
                         func_class = "Global_Objects/"+func.variable_type;
                     }
@@ -79,7 +78,7 @@ define(function(require, exports, module) {
                 
             // if tags for JS functions aren't available 
             if (!tags) {
-                if (!func.type) {
+                if (!func.type  || (func.type == "." && (func.variable_type == "this" || func.variable == "this"))) {
                     // => check current document for user defined function
                     var tags = get_userdefined_tags(currentDoc,func);
                     func_class = 'user_defined';
@@ -388,6 +387,10 @@ define(function(require, exports, module) {
             if (value.indexOf('new RegExp') !== -1) {
                 return 'RegExp';   
             }
+			if (value.indexOf('this') !== -1) {
+				return 'this';
+			}
+
             // checks '/anc/flags' and "/anc/flags" => RegExp
             var regex_end = new RegExp("\/(g|m|i|y){0,4}'");
             var regex_end2 = new RegExp('\/(g|m|i|y){0,4}"');
