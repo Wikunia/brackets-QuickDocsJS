@@ -36,6 +36,7 @@ define(function(require, exports, module) {
         
         // get func.name and func.type ('.' or 'Math.')
         var func = get_func_name(currentDoc,sel.start);
+
         // if a function was selected
         if (func) {
             var func_class,url;          
@@ -78,11 +79,9 @@ define(function(require, exports, module) {
                 
             // if tags for JS functions aren't available 
             if (!tags) {
-                if (!func.type  || (func.type == "." && (func.variable_type == "this" || func.variable == "this"))) {
-                    // => check current document for user defined function
-                    var tags = get_userdefined_tags(currentDoc,func);
-                    func_class = 'user_defined';
-                }
+				// => check current document for user defined function
+				var tags = get_userdefined_tags(currentDoc,func);
+				func_class = 'user_defined';
             }
             if (tags) {
                 if (tags.s != "" || tags.p) {
@@ -280,6 +279,7 @@ define(function(require, exports, module) {
                             break;
                         }
                     }
+					func.variable = func.variable.trim();
                     // console.log('func.variable2: ' + func.variable);
                     var var_param = func.variable.indexOf('[');
                     // if variable is sth like abc[i] it can be an array or a string
@@ -288,7 +288,7 @@ define(function(require, exports, module) {
                         func.variable_type = 'unknown';
                     } else {
                          // try to get the VariableType ('String','Array','RegExp','unknown'
-                        func.variable_type = getVariableType(content,func.variable);     
+                        func.variable_type = getVariableType(content,func.variable,pos);
                     }
                    
                     //console.log('func.variable_type: ' + func.variable_type);
@@ -331,9 +331,10 @@ define(function(require, exports, module) {
 		it's important for functions which exists for strings and arrays
         @param content  {string} content of document
         @param variable {string} name of the variable
+		@param pos {object} current cursor position
         @return type of the variable: unknown,String,Array or RegExp
     */
-    function getVariableType (content, variable) {
+    function getVariableType (content, variable,pos) {
         // get the declaration for this variable 
         // can be a ',' between two declarations
         var regex = new RegExp('var [^;]*?' + variable + '\\s*?=','');
@@ -345,9 +346,60 @@ define(function(require, exports, module) {
             var match_len = match[0].length;
         } else {
             // if the declaration is not available in this content
-            return 'unknown';   
+			// could be a function parameter
+			var before = content.split("\n",pos.line);
+			for (var i = before.length-1; i >= 0; i--) {
+				if (before[i].indexOf('function') !== -1) break;
+			}
+			var functionLine = before[i];
+			var regex = /(var (.*)=[ \(]*?function(.*)|function (.*?)|(.*?):\s*?function(.*?)|(.*?)\.prototype\.(.*?)\s*?=\s*?function(.*?))(\n|\r|$)/gmi;
+
+			var matches = null;
+			while (matches = regex.exec(functionLine)) {
+				// matches[0] = all
+				// matches[2] = '''function_name''' or matches[4] if matches[2] undefined or matches[5] if both undefined
+				// get the function name
+				// start_pos
+				if (matches[2]) {
+					var match_func = matches[2].trim();
+				} else if (matches[4]) {
+					var match_func = matches[4].trim();
+				} else if (matches[5]) {
+					var match_func = matches[5].trim();
+				}  else if (matches[8]) {
+					var match_func = matches[8].trim();
+				} else {
+					break;
+				}
+				var end_func_name = match_func.search(/( |\(|$)/);
+				// the variable must be a parameter
+				if (match_func.substr(end_func_name).indexOf(variable) !== -1 || (matches[9] && matches[9].indexOf(variable) !== -1)) {
+					var match_func = match_func.substring(0,end_func_name).trim();
+
+					var func = {name: match_func};
+					if (matches[7]) {
+						func.variable_type = matches[7];
+					}
+					var tags = get_userdefined_tags(content,func);
+
+					if (tags) {
+						for (var t = 0; t < tags.p.length; t++) {
+							if (tags.p[t].t == variable) {
+								var type = tags.p[t].type;
+								type = type.substr(0,1).toUpperCase() + type.substr(1);
+								return type;
+								break;
+							}
+						}
+					}
+				}
+			}
+
+			return 'unknown';
         }
         
+
+
     
         // get declaration value
         // substr(pos).search(regex)+pos = indexOf(regex,pos)
@@ -419,7 +471,7 @@ define(function(require, exports, module) {
     function get_userdefined_tags(content,func) {
         var tags = new Object();
 		// global,multiline,insensitive
-        var regex = /\/\*\*(?:[ \t]*)[\n\r](?:[\s\S]*?)\*\/(?:[ \t]*)[\n\r]*?(?:[ \t]*)(var (.*)=[ \(]*?function(.*)|function (.*?)|(.*?):\s*?function(.*?))(\n|\r|$)/gmi;
+        var regex = /\/\*\*(?:[ \t]*)[\n\r](?:[\s\S]*?)\*\/(?:[ \t<]*)[\n\r]*?(?:[ \t]*)(var (.*)=[ \(]*?function(.*)|function (.*?)|(.*?):\s*?function(.*?)|(.*?)\.prototype\.(.*?)\s*?=\s*?function(.*?))(\n|\r|$)/gmi;
       
 		var matches = null;
 
@@ -434,6 +486,11 @@ define(function(require, exports, module) {
 				var match_func = matches[4].trim();	
 			} else if (matches[5]) {
 				var match_func = matches[5].trim();
+			}  else if (matches[8]) {
+				// prototype
+				if (matches[7] == func.variable_type) {
+					var match_func = matches[8].trim();
+				}
 			} else {
 				break;
 			}
