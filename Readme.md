@@ -1,5 +1,6 @@
 # QuickDocsJS
 This extension provides a quick documentation to each JavaScript function.
+It supports JSDoc comments since v1.2 and some requirejs stuff (v1.4)
 
 ## How to use
 You can use the Navigation menu or ```Ctrl+K``` (Windows) or ```CMD+K``` (Mac), while your cursor is on a JavaScript function, to open the inline documentation.
