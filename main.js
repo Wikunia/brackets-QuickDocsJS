@@ -6,7 +6,10 @@ define(function(require, exports, module) {
     var KeyBindingManager = brackets.getModule("command/KeyBindingManager"),
     EditorManager = brackets.getModule("editor/EditorManager"),
     DocumentManager = brackets.getModule("document/DocumentManager"),
-    ExtensionUtils = brackets.getModule("utils/ExtensionUtils");
+    ExtensionUtils = brackets.getModule("utils/ExtensionUtils"),
+	FileSystem          = brackets.getModule("filesystem/FileSystem"),
+	FileUtils           = brackets.getModule("file/FileUtils"),
+	ProjectManager          = brackets.getModule("project/ProjectManager");
 
     var ExtPath = ExtensionUtils.getModulePath(module);
     
@@ -15,9 +18,12 @@ define(function(require, exports, module) {
  
     
     function inlineProvider(hostEditor, pos) {
+		var result = new $.Deferred();
+
         // get editor content
         var currentDoc = DocumentManager.getCurrentDocument().getText();
        
+		var docDir = FileUtils.getDirectoryPath(hostEditor.document.file.fullPath);
         // get programming language
         var langId = hostEditor.getLanguageForSelection().getId();
         
@@ -36,56 +42,99 @@ define(function(require, exports, module) {
         
         // get func.name and func.type ('.' or 'Math.')
         var func = get_func_name(currentDoc,sel.start);
+		console.log(func);
 
         // if a function was selected
         if (func) {
-            var func_class,url;          
-            
-            switch(func.type) {
-                case ".": // string or Array
-                    // if variable type is unknown
-                    if (func.variable_type == 'unknown') { 
-                        var tags = getTags(func,"String");
-                        func_class = "Global_Objects/String";
-                        if (!tags) { // try array functions
-                            var tags = getTags(func,"Array");
-                            func_class = "Global_Objects/Array";
-                        } 
-                        if (!tags) { // try RegExp functions
-                            var tags = getTags(func,"RegExp");
-                            func_class = "Global_Objects/RegExp";
-                        }
-                    } else if (func.variable_type != "this") { // if variable type is defined but not this
-                        var tags = getTags(func,func.variable_type);
-                        func_class = "Global_Objects/"+func.variable_type;
-                    }
-                    break;
-                case "Math.": // Math functions
-                    var tags = getTags(func,"Math");
-                     func_class = "Global_Objects/Math";
-                    break;
-                case "RegExp.": // RegExp functions
-                    var tags = getTags(func,"RegExp");
-                     func_class = "Global_Objects/RegExp";
-                    break;
-                default:
-                    var tags = getTags(func,"Statements"); 
-                    func_class = "Statements";
-                    if (!tags) {
-                        var tags = getTags(func,"global");
-                        func_class = "Global_Objects";
-                    }
-            }
-                
-            // if tags for JS functions aren't available 
-            if (!tags) {
-				// => check current document for user defined function
-				var tags = get_userdefined_tags(currentDoc,func);
-				func_class = 'user_defined';
-            }
-            if (tags) {
-                if (tags.s != "" || tags.p) {
-                    var summary = tags.s;
+            var func_class,url;
+			var tags = false;
+            if (!("mod" in func)) {
+				switch(func.type) {
+					case ".": // string or Array
+						// if variable type is unknown
+						if (func.variable_type == 'unknown') {
+							tags = getTags(func,"String");
+							func_class = "Global_Objects/String";
+							if (!tags) { // try array functions
+								tags = getTags(func,"Array");
+								func_class = "Global_Objects/Array";
+							}
+							if (!tags) { // try RegExp functions
+								tags = getTags(func,"RegExp");
+								func_class = "Global_Objects/RegExp";
+							}
+						} else if (func.variable_type != "this") { // if variable type is defined but not this
+							tags = getTags(func,func.variable_type);
+							func_class = "Global_Objects/"+func.variable_type;
+						}
+						break;
+					case "Math.": // Math functions
+						tags = getTags(func,"Math");
+						 func_class = "Global_Objects/Math";
+						break;
+					case "RegExp.": // RegExp functions
+						tags = getTags(func,"RegExp");
+						 func_class = "Global_Objects/RegExp";
+						break;
+					default:
+						tags = getTags(func,"Statements");
+						func_class = "Statements";
+						if (!tags) {
+							tags = getTags(func,"global");
+							func_class = "Global_Objects";
+						}
+				}
+
+				// if tags for JS functions aren't available
+				if (!tags) {
+					// => check current document for user defined function
+					var tags = get_userdefined_tags(currentDoc,func);
+					func_class = 'user_defined';
+				}
+				if (tags) {
+					if (tags.s != "" || tags.p) {
+						var url = func.name;
+						var inlineViewer = sendToInlineViewer(hostEditor,tags,func,url);
+						inlineViewer.done(function(inlineWidget) {
+							console.log(inlineWidget);
+							result.resolve(inlineWidget);
+						});
+					}
+				}
+
+			} else {
+				var modContent = getModuleContent(docDir,func.mod);
+				modContent.done(function(content) {
+					var tags = get_userdefined_tags(content,func);
+					console.log(tags);
+					if (tags.s != "" || tags.p) {
+						var url = func.name;
+						var inlineViewer = sendToInlineViewer(hostEditor,tags,func,url);
+						inlineViewer.done(function(inlineWidget) {
+							console.log(inlineWidget);
+							result.resolve(inlineWidget);
+						});
+					}
+				}).fail(function() {
+					console.log('fail');
+					return null;
+				});
+			}
+
+			if (result.state() == "rejected") {
+				console.log('rejected');
+				return null;
+			}
+			return result.promise();
+
+        } else {
+        	return null;
+		}
+
+
+		function sendToInlineViewer(hostEditor,tags,func,url) {
+			if (tags.s != "" || tags.p) {
+				var summary = tags.s;
                     var syntax = tags.y.replace(/\n/g,'<br>');
                     // indent code if it has space(s) at the beginning of the line
                     syntax = syntax.replace(/<br>\s(.*?).(.*?)(<br>|$)/g,'<br><p style="margin:0 auto; text-indent:2em;">$2</p>');
@@ -122,10 +171,8 @@ define(function(require, exports, module) {
                     inlineWidget.load(hostEditor);
                     result.resolve(inlineWidget);
                     return result.promise();
-                }
-            }
-        } 
-        return null;
+			}
+		}
     }
     
     /**
@@ -157,7 +204,8 @@ define(function(require, exports, module) {
         
         return null;
     }
-    
+
+
     /**
         Gets the function name and the type of the function
         @param content  {string} content of document
@@ -288,7 +336,11 @@ define(function(require, exports, module) {
                         func.variable_type = 'unknown';
                     } else {
                          // try to get the VariableType ('String','Array','RegExp','unknown'
-                        func.variable_type = getVariableType(content,func.variable,pos);
+						var varType = getVariableType(content,func.variable,pos);
+                        func.variable_type = varType.type;
+						if (varType.mod) {
+							func.mod = varType.mod;
+						}
                     }
                    
                     //console.log('func.variable_type: ' + func.variable_type);
@@ -327,12 +379,12 @@ define(function(require, exports, module) {
     }
     
     /**
-        get the type of a variable
+        get the type of a variable or the module
 		it's important for functions which exists for strings and arrays
         @param content  {string} content of document
         @param variable {string} name of the variable
 		@param pos {object} current cursor position
-        @return type of the variable: unknown,String,Array or RegExp
+        @return object (type of the variable: unknown,String,Array or RegExp, mod: modul name else '')
     */
     function getVariableType (content, variable,pos) {
         // get the declaration for this variable 
@@ -347,7 +399,75 @@ define(function(require, exports, module) {
         } else {
             // if the declaration is not available in this content
 			// could be a function parameter
+			// check for requirejs (define)
 			var before = content.split("\n",pos.line);
+			var defineBool = false;
+			for(var i = 0; i < before.length; i++) {
+				if (before[i].indexOf('define') !== -1) {
+					defineBool = true;
+					var defineLine = i;
+					break;
+				}
+			}
+			if (defineBool) {
+				var definePos = content.indexOf('define');
+				var define = content.substr(content.indexOf('(',definePos)+1);
+				console.log(define);
+
+				var funcLine = false;
+				for(var j = defineLine; j < before.length; j++) {
+					var funcPos;
+					console.log(before[j]);
+					if ((funcPos = before[j].indexOf('function')) !== -1) {
+						funcLine = j;
+						break;
+					}
+				}
+				if (funcLine !== false) {
+					var functionLine = before[funcLine];
+					console.log(functionLine);
+					var paramPos;
+					if ((paramPos = functionLine.indexOf(variable)) !== -1) {
+						// get the correct require module
+						// -> which parameter number?
+						var afterFunc = functionLine.substr(funcPos);
+						afterFunc = afterFunc.substring(afterFunc.indexOf('(')+1,afterFunc.indexOf(')'));
+						var params = afterFunc.split(',');
+						console.log(params);
+						var paramNr = false;
+						for (var p = 0; p < params.length; p++) {
+							if (params[p].trim() == variable) {
+								paramNr = p;
+								break;
+							}
+						}
+					}
+				}
+				if (paramNr !== false) {
+					console.log(paramNr);
+					// get the correct module name
+					var modulRegEx = /([^,]*?,\s*?\[([^\]]*?)\]|\s*?\[([^\]]*?)\])/gmi;
+					var modules = modulRegEx.exec(define);
+					var moduleError = false;
+					if (modules[2]) {
+						modules = modules[2];
+					} else if (modules[3]) {
+						modules = modules[3];
+					} else {
+						moduleError = true;
+					}
+					if (!moduleError) {
+						console.log(modules);
+						modules = modules.substring(modules.indexOf("'")+1,modules.lastIndexOf("'"));
+						console.log(modules);
+						// correct module name:
+						modules = modules.split(/'\s*?,\s*?'/);
+						return {type: 'unknown', mod: modules[paramNr]};
+					}
+				}
+			}
+
+
 			for (var i = before.length-1; i >= 0; i--) {
 				if (before[i].indexOf('function') !== -1) break;
 			}
@@ -387,7 +507,7 @@ define(function(require, exports, module) {
 							if (tags.p[t].t == variable) {
 								var type = tags.p[t].type;
 								type = type.substr(0,1).toUpperCase() + type.substr(1);
-								return type;
+								return {type:type};
 								break;
 							}
 						}
@@ -395,7 +515,7 @@ define(function(require, exports, module) {
 				}
 			}
 
-			return 'unknown';
+			return {type:'unknown'};
         }
         
 
@@ -424,23 +544,23 @@ define(function(require, exports, module) {
                 var makes_string = ',substr,substring,search,concat,replace,trim,big,blink,bold,';
                 makes_string += 'fixed,fontcolor,fontsize,italics,link,small,strike,sub,sup,join,pop,push,';
                 if (makes_string.indexOf(','+func+',') !== -1) {
-                    return 'String';
+                    return {type:'String'};
                 }
                 // all functions that outputs an array
                 if (',split,match,reverse,sort,map,'.indexOf(','+func+',') !== -1) {
-                    return 'Array';
+                    return {type:'Array'};
                 }
             }
         } else { // if the declaration has no function parts
             // array can be declared with new Array or []
             if (value.indexOf('new Array') !== -1 || (value.substr(0,1) == '[') ) {
-                return 'Array';   
+                return {type:'Array'};
             }
             if (value.indexOf('new RegExp') !== -1) {
-                return 'RegExp';   
+                return {type:'RegExp'};
             }
 			if (value.indexOf('this') !== -1) {
-				return 'this';
+				return {type:'this'};
 			}
 
             // checks '/anc/flags' and "/anc/flags" => RegExp
@@ -448,15 +568,15 @@ define(function(require, exports, module) {
             var regex_end2 = new RegExp('\/(g|m|i|y){0,4}"');
             if ((value.substr(0,2) == "'/" && value.substr(-6,6).search(regex_end) !== -1) ||
                (value.substr(0,2) == '"/' && value.substr(-6,6).search(regex_end2) !== -1)) {
-                return 'RegExp';
+                return {type:'RegExp'};
             }
             
             // checks 'str' and "str"
             if ((value.substr(0,1) == "'" && value.substr(-1,1) == "'") || (value.substr(0,1) == '"' && value.substr(-1,1) == '"')) {
-                return 'String';
+                return {type:'String'};
             }
         }
-        return 'unknown';                                     
+        return {type:'unknown'};
     }
     
 
@@ -476,6 +596,7 @@ define(function(require, exports, module) {
 		var matches = null;
 
         while (matches = regex.exec(content)) {
+			console.log(matches);
             // matches[0] = all
              // matches[2] = '''function_name''' or matches[4] if matches[2] undefined or matches[5] if both undefined
             // get the function name
@@ -576,6 +697,97 @@ define(function(require, exports, module) {
         return null;   
     }
    
+
+	/**
+	 * Get the content of a special modul
+	 * For that iterate through all js files
+	 * @param docDir directory of current document
+	 * @param moduleName name of the js module
+	 * @return content The content of the js module file
+	 */
+	function getModuleContent(docDir,moduleName) {
+	    function getJSFiles(file) {
+            if (file._name.substr(-3) == ".js") return true;
+        }
+        var result = new $.Deferred();
+
+        ProjectManager.getAllFiles(getJSFiles)
+            .done(function (files) {
+				// sort files to make it faster
+				// if the js file name contains the module name it's more relevant
+				var sortedFilesTop = [];
+				var sortedFilesBottom = [];
+				var sortedFiles = [];
+				files.forEach(function(file) {
+					if (file._name.toLowerCase().indexOf(moduleName.toLowerCase()) >= 0) {
+						sortedFilesTop.push(file);
+					} else {
+						sortedFilesBottom.push(file);
+					}
+				});
+				var content;
+				if (sortedFilesTop.length != 0 || sortedFilesBottom.length < 10) {
+					sortedFiles = sortedFilesTop.concat(sortedFilesBottom);
+					sortedFiles = sortedFiles.slice(0,10);
+					content = getModuleContentIterator(sortedFiles,moduleName);
+				}
+				if (content) {
+					return result.resolve(content);
+				}
+			})
+			.fail(function () {
+				result.reject();
+			});
+		return result.promise();
+	}
+
+	/**
+	 * Get the content of a special module name
+	 * For that iterate through all js files
+	 * @param contents value of directory.getContents
+	 * @param moduleName name of the js class
+	 * @return content The content of the php class file
+	 */
+	function getModuleContentIterator(contents,moduleName) {
+		var result = '';
+		console.log(contents);
+		moduleName = moduleName.addSlashes();
+		console.log(moduleName);
+		if (contents) {
+			contents.some(function (entry) {
+				if (entry._isDirectory == false) {
+					var match = new RegExp("define\\s*?\\(\\s*?'"+moduleName+"'");
+					if (entry._name.substr(-3) == ".js") {
+						if (entry._contents) {
+							if (entry._contents.match(match)) {
+								result = entry._contents;
+								return true;
+							}
+						} else {
+							var xhr = new XMLHttpRequest();
+							// false => synchron
+							xhr.open('get',entry._path, false);
+
+							// Send the request
+							xhr.send(null);
+
+							if(xhr.status === 0){
+								var text = xhr.responseText;
+								if (text.match(match)) {
+									result = text;
+									return true;
+								}
+							}
+						}
+					}
+				}
+			});
+		}
+		if (result) {
+			return result;
+		}
+		return false;
+	}
     
     /**
         reverse a string
@@ -584,6 +796,12 @@ define(function(require, exports, module) {
         return s.split("").reverse().join("");
     }
     
+	String.prototype.addSlashes = function() {
+	  return this
+		.replace(/([^\\])\//g, '$1\\\/');
+	}
+
+
     
     EditorManager.registerInlineDocsProvider(inlineProvider); 
 });
