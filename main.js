@@ -361,8 +361,8 @@ define(function(require, exports, module) {
                         break;
                 }
             }
-			// if func name starts with a letter
-			if (func.name.charAt(0).match(/[a-zA-Z]/)) {
+			// if func name starts with a letter or an underscore or $
+			if (func.name.charAt(0).match(/[\$a-zA-Z_]/)) {
             	return func;
 			} else {
 				return null;
