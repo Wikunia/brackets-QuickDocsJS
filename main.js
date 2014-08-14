@@ -39,11 +39,9 @@ define(function(require, exports, module) {
         }
         
         var currentMod = getCurrentModuleDir(docDir,currentDoc);
-		console.log('currentMod: '+currentMod);
         
         // get func.name and func.type ('.' or 'Math.')
         var func = get_func_name(currentDoc,sel.start,currentMod);
-		console.log(func);
 
         // if a function was selected
         if (func) {
@@ -97,7 +95,6 @@ define(function(require, exports, module) {
 						var url = func.name;
 						var inlineViewer = sendToInlineViewer(hostEditor,tags,func,url);
 						inlineViewer.done(function(inlineWidget) {
-							console.log(inlineWidget);
 							result.resolve(inlineWidget);
 						});
 					}
@@ -110,27 +107,22 @@ define(function(require, exports, module) {
 				modContent.done(function(content) {
 					var tags = get_userdefined_tags(content,func);
 					if (tags) {
-						console.log(tags);
 						if (tags.s != "" || tags.p) {
 							var url = func.name;
 							var inlineViewer = sendToInlineViewer(hostEditor,tags,func,url);
 							inlineViewer.done(function(inlineWidget) {
-								console.log(inlineWidget);
 								result.resolve(inlineWidget);
 							});
 						}
 					} else {
-						console.log('no tags');
 						result.reject();
 					}
 				}).fail(function() {
-					console.log('fail');
 					return result.reject();
 				});
 			}
 
 			if (result.state() == "rejected") {
-				console.log('rejected');
 				return null;
 			}
 			return result.promise();
@@ -173,7 +165,6 @@ define(function(require, exports, module) {
 					}
 
 
-                    // console.log(syntax);
                     var result = new $.Deferred();
                     var inlineWidget = new InlineDocsViewer(func.name,{SUMMARY:summary, SYNTAX: syntax, RETURN: tags.r, URL:url, VALUES:parameters});
                     inlineWidget.load(hostEditor);
@@ -249,8 +240,7 @@ define(function(require, exports, module) {
         
         var func_start_pos = pos.ch-b;
         var func_name_length = b+e;
-        
-        // console.log(line_after.substr(e,1));
+
         // if the cursor is not on the function name but on the part before the dot
         if (line_after.substr(e,1) === "[") {
             while (line_after.substr(e,1) !== ']') {
@@ -273,9 +263,7 @@ define(function(require, exports, module) {
             line_begin = line.substr(0,e+pos.ch);
             // reverse the string before current position
             line_begin_rev = reverse_str(line_begin);
-            
-            // console.log(line_after);
-            // console.log(line_begin);
+
             e = 0;
             while (function_chars.indexOf(line_after.substr(e,1).toLowerCase()) !== -1 && e < line_after.length) {
                 e++;
@@ -291,8 +279,6 @@ define(function(require, exports, module) {
         if (no_function_chars.indexOf(line_begin_rev.substr(b,1)) === -1 || b == line_begin_rev.length) {
             var func = new Object();
             func.name = line.substr(func_start_pos,func_name_length);
-            // console.log(func);
-            // console.log('b: ' + b + ' e: ' + e);
             
             // check if function is like abc.substr or only like eval (no point)
             if (line_begin_rev.substr(b,1) == ".") {
@@ -320,7 +306,6 @@ define(function(require, exports, module) {
                     }
                     // func.variable could look like abc.substr(0,1) if the function was abc.substr(0,1).indexOf('') 
                     func.variable = line.substr(func_start_pos+b-v,v-b-1);
-                    // console.log('func.variable1: ' + func.variable);
                     // delete function names inside func.variables
                     // split variable into parts
                     var func_variable_parts = func.variable.split(".");
@@ -337,7 +322,6 @@ define(function(require, exports, module) {
                         }
                     }
 					func.variable = func.variable.trim();
-                    // console.log('func.variable2: ' + func.variable);
                     var var_param = func.variable.indexOf('[');
                     // if variable is sth like abc[i] it can be an array or a string
                     if (var_param !== -1) {
@@ -351,8 +335,6 @@ define(function(require, exports, module) {
 							func.mod = varType.mod;
 						}
                     }
-                   
-                    //console.log('func.variable_type: ' + func.variable_type);
                 }
             } else {
                 // some function names have different options
@@ -409,10 +391,8 @@ define(function(require, exports, module) {
         } else {
             // if the declaration is not available in this content
 			regex = new RegExp(variable + '\\s*?=','');
-			console.log(regex);
         	match = regex.exec(content);
 			if (match) {
-				console.log(match);
 				var pos = match.index;
 				// length of the match
 				var match_len = match[0].length;
@@ -421,7 +401,6 @@ define(function(require, exports, module) {
 				// check for requirejs (define)
 				var before = content.split("\n",pos.line);
 				var result = getModule(content,before,variable);
-				console.log(result);
 				if (result.mod) {
 					return result;
 				}
@@ -488,11 +467,9 @@ define(function(require, exports, module) {
 		var newRegex = /^new\s+?([a-z]*)/i;
 		var objectName = newRegex.exec(value);
 		if (objectName) {
-			console.log(objectName);
 			if (currentMod != '') { // if the current file is a requirejs module and the variable refers to a module
 				var before = content.split("\n",pos.line);
 				var result = getModule(content,before,objectName[1]);
-				console.log(result);
 				if (result.mod) {
 					return result;
 				}
@@ -573,12 +550,10 @@ define(function(require, exports, module) {
 		if (defineBool) {
 			var definePos = content.indexOf('define');
 			var define = content.substr(content.indexOf('(',definePos)+1);
-			console.log(define);
 
 			var funcLine = false;
 			for(var j = defineLine; j < before.length; j++) {
 				var funcPos;
-				console.log(before[j]);
 				if ((funcPos = before[j].indexOf('function')) !== -1) {
 					funcLine = j;
 					break;
@@ -586,7 +561,6 @@ define(function(require, exports, module) {
 			}
 			if (funcLine !== false) {
 				var functionLine = before[funcLine];
-				console.log(functionLine);
 				var paramPos;
 				if ((paramPos = functionLine.indexOf(variable)) !== -1) {
 					// get the correct require module
@@ -594,7 +568,6 @@ define(function(require, exports, module) {
 					var afterFunc = functionLine.substr(funcPos);
 					afterFunc = afterFunc.substring(afterFunc.indexOf('(')+1,afterFunc.indexOf(')'));
 					var params = afterFunc.split(',');
-					console.log(params);
 					var paramNr = false;
 					for (var p = 0; p < params.length; p++) {
 						if (params[p].trim() == variable) {
@@ -605,7 +578,6 @@ define(function(require, exports, module) {
 				}
 			}
 			if (paramNr !== false) {
-				console.log(paramNr);
 				// get the correct module name
 				var modulRegEx = /([^,]*?,\s*?\[([^\]]*?)\]|\s*?\[([^\]]*?)\])/gmi;
 				var modules = modulRegEx.exec(define);
@@ -618,9 +590,7 @@ define(function(require, exports, module) {
 					moduleError = true;
 				}
 				if (!moduleError) {
-					console.log(modules);
 					modules = modules.substring(modules.indexOf("'")+1,modules.lastIndexOf("'"));
-					console.log(modules);
 					// correct module name:
 					modules = modules.split(/'\s*?,\s*?'/);
 					return {type: 'unknown', mod: modules[paramNr]};
@@ -643,7 +613,6 @@ define(function(require, exports, module) {
 		var matches = null;
 
         while (matches = regex.exec(content)) {
-			console.log(matches);
             // matches[0] = all
              // matches[2] = '''function_name''' or matches[4] if matches[2] undefined or matches[5] if both undefined
             // get the function name
@@ -758,7 +727,6 @@ define(function(require, exports, module) {
             if (file._name.substr(-3) == ".js") return true;
         }
         var result = new $.Deferred();
-		console.log(currentModuleName+moduleName+'.js');
         ProjectManager.getAllFiles(getJSFiles)
             .done(function (files) {
 				// sort files to make it faster
@@ -769,7 +737,6 @@ define(function(require, exports, module) {
 				var content = false;
 				files.forEach(function(file) {
 					if (file._path == (currentModuleName+moduleName+'.js')) {
-						console.log(file);
 						content = getModuleContentIterator(file,moduleName);
 						return true;
 					}
@@ -794,11 +761,9 @@ define(function(require, exports, module) {
 	function getModuleContentIterator(file,moduleName) {
 		var result = '';
 		moduleName = moduleName.addSlashes();
-		console.log(moduleName);
 		if (file) {
 			if (file._isDirectory == false) {
 				if (file._name.substr(-3) == ".js") {
-					console.log('correctFile: '+file._name);
 					if (file._contents) {
 						result = file._contents;
 					} else {
@@ -818,7 +783,6 @@ define(function(require, exports, module) {
 			}
 		}
 		if (result) {
-			console.log('moduleContent: '+result);
 			return result;
 		}
 		return false;
