@@ -89,10 +89,12 @@ define(function(require, exports, module) {
 					// => check current document for user defined function
 					var tags = get_userdefined_tags(currentDoc,func);
 					func_class = 'user_defined';
+					url = false;
+				} else {
+					url = true;
 				}
 				if (tags) {
 					if (tags.s != "" || tags.p) {
-						var url = func.name;
 						var inlineViewer = sendToInlineViewer(hostEditor,tags,func,url);
 						inlineViewer.done(function(inlineWidget) {
 							result.resolve(inlineWidget);
@@ -108,7 +110,7 @@ define(function(require, exports, module) {
 					var tags = get_userdefined_tags(content,func);
 					if (tags) {
 						if (tags.s != "" || tags.p) {
-							var url = func.name;
+							url = false;
 							var inlineViewer = sendToInlineViewer(hostEditor,tags,func,url);
 							inlineViewer.done(function(inlineWidget) {
 								result.resolve(inlineWidget);
@@ -150,11 +152,9 @@ define(function(require, exports, module) {
                     func.name = func.name.replace(/___/,'...');
                     
                     // generate url for read more if func_class isn't user_defined
-                    if (func_class !== 'user_defined') {
-                        url = func_class+'/'+func.name;
-                    } else {
-                        url = null;
-                    }
+                    if (url) {
+						url = func_class+'/'+func.name;
+					}
 
 					if (tags.r) {
 						if (typeof tags.r.d == 'undefined') {
@@ -306,6 +306,7 @@ define(function(require, exports, module) {
                     }
                     // func.variable could look like abc.substr(0,1) if the function was abc.substr(0,1).indexOf('') 
                     func.variable = line.substr(func_start_pos+b-v,v-b-1);
+
                     // delete function names inside func.variables
                     // split variable into parts
                     var func_variable_parts = func.variable.split(".");
@@ -322,6 +323,7 @@ define(function(require, exports, module) {
                         }
                     }
 					func.variable = func.variable.trim();
+
                     var var_param = func.variable.indexOf('[');
                     // if variable is sth like abc[i] it can be an array or a string
                     if (var_param !== -1) {
@@ -335,6 +337,7 @@ define(function(require, exports, module) {
 							func.mod = varType.mod;
 						}
                     }
+
                 }
             } else {
                 // some function names have different options
@@ -401,7 +404,7 @@ define(function(require, exports, module) {
 				// check for requirejs (define)
 				var before = content.split("\n",pos.line);
 				var result = getModule(content,before,variable);
-				if (result.mod) {
+				if (result && "mod" in result) {
 					return result;
 				}
 
@@ -597,6 +600,7 @@ define(function(require, exports, module) {
 				}
 			}
 		}
+		return false;
 	}
 
 	/**
