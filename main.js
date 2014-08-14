@@ -38,7 +38,8 @@ define(function(require, exports, module) {
             return null;
         }
         
-        
+        var currentMod = getCurrentModuleDir(docDir,currentDoc);
+		console.log('currentMod: '+currentMod);
         
         // get func.name and func.type ('.' or 'Math.')
         var func = get_func_name(currentDoc,sel.start);
@@ -103,18 +104,20 @@ define(function(require, exports, module) {
 				}
 
 			} else {
-				var modContent = getModuleContent(docDir,func.mod);
+				var modContent = getModuleContent(docDir,func.mod,currentMod);
 				modContent.done(function(content) {
 					var tags = get_userdefined_tags(content,func);
-					console.log(tags);
-					if (tags.s != "" || tags.p) {
-						var url = func.name;
-						var inlineViewer = sendToInlineViewer(hostEditor,tags,func,url);
-						inlineViewer.done(function(inlineWidget) {
-							console.log(inlineWidget);
-							result.resolve(inlineWidget);
-						});
-					}
+					if (tags) {
+						console.log(tags);
+						if (tags.s != "" || tags.p) {
+							var url = func.name;
+							var inlineViewer = sendToInlineViewer(hostEditor,tags,func,url);
+							inlineViewer.done(function(inlineWidget) {
+								console.log(inlineWidget);
+								result.resolve(inlineWidget);
+							});
+						}
+					} else return null;
 				}).fail(function() {
 					console.log('fail');
 					return null;
@@ -703,14 +706,15 @@ define(function(require, exports, module) {
 	 * For that iterate through all js files
 	 * @param docDir directory of current document
 	 * @param moduleName name of the js module
+	 * @param currentModuleName name of the current module
 	 * @return content The content of the js module file
 	 */
-	function getModuleContent(docDir,moduleName) {
+	function getModuleContent(docDir,moduleName,currentModuleName) {
 	    function getJSFiles(file) {
             if (file._name.substr(-3) == ".js") return true;
         }
         var result = new $.Deferred();
-
+		console.log(currentModuleName+moduleName+'.js');
         ProjectManager.getAllFiles(getJSFiles)
             .done(function (files) {
 				// sort files to make it faster
@@ -718,19 +722,14 @@ define(function(require, exports, module) {
 				var sortedFilesTop = [];
 				var sortedFilesBottom = [];
 				var sortedFiles = [];
+				var content = false;
 				files.forEach(function(file) {
-					if (file._name.toLowerCase().indexOf(moduleName.toLowerCase()) >= 0) {
-						sortedFilesTop.push(file);
-					} else {
-						sortedFilesBottom.push(file);
+					if (file._path == (currentModuleName+moduleName+'.js')) {
+						console.log(file);
+						content = getModuleContentIterator(file,moduleName);
+						return true;
 					}
 				});
-				var content;
-				if (sortedFilesTop.length != 0 || sortedFilesBottom.length < 10) {
-					sortedFiles = sortedFilesTop.concat(sortedFilesBottom);
-					sortedFiles = sortedFiles.slice(0,10);
-					content = getModuleContentIterator(sortedFiles,moduleName);
-				}
 				if (content) {
 					return result.resolve(content);
 				}
@@ -744,51 +743,61 @@ define(function(require, exports, module) {
 	/**
 	 * Get the content of a special module name
 	 * For that iterate through all js files
-	 * @param contents value of directory.getContents
+	 * @param file file by ProjectManager.getAllFiles
 	 * @param moduleName name of the js class
 	 * @return content The content of the php class file
 	 */
-	function getModuleContentIterator(contents,moduleName) {
+	function getModuleContentIterator(file,moduleName) {
 		var result = '';
-		console.log(contents);
 		moduleName = moduleName.addSlashes();
 		console.log(moduleName);
-		if (contents) {
-			contents.some(function (entry) {
-				if (entry._isDirectory == false) {
-					var match = new RegExp("define\\s*?\\(\\s*?'"+moduleName+"'");
-					if (entry._name.substr(-3) == ".js") {
-						if (entry._contents) {
-							if (entry._contents.match(match)) {
-								result = entry._contents;
-								return true;
-							}
-						} else {
-							var xhr = new XMLHttpRequest();
-							// false => synchron
-							xhr.open('get',entry._path, false);
+		if (file) {
+			if (file._isDirectory == false) {
+				if (file._name.substr(-3) == ".js") {
+					console.log('correctFile: '+file._name);
+					if (file._contents) {
+						result = file._contents;
+					} else {
+						var xhr = new XMLHttpRequest();
+						// false => synchron
+						xhr.open('get',file._path, false);
 
-							// Send the request
-							xhr.send(null);
+						// Send the request
+						xhr.send(null);
 
-							if(xhr.status === 0){
-								var text = xhr.responseText;
-								if (text.match(match)) {
-									result = text;
-									return true;
-								}
-							}
+						if(xhr.status === 0){
+							var text = xhr.responseText;
+							result = text;
 						}
 					}
 				}
-			});
+			}
 		}
 		if (result) {
+			console.log('moduleContent: '+result);
 			return result;
 		}
 		return false;
 	}
     
+	/**
+	 * Get the directory of the current requirejs module
+	 * @param {string} docDir current directory
+	 * @param {string} content content of the current file
+	 */
+	function getCurrentModuleDir(docDir,content) {
+		var match = /define\s*?\(\s*?'(.*?)'/gmi;
+		var matches = match.exec(content);
+		if (matches[1]) {
+			var moduleName = matches[1];
+			var lastSlash;
+			var moduleDir = moduleName.substr(0,((lastSlash = moduleName.lastIndexOf('/')) !== -1) ? lastSlash+1: moduleName.length);
+			moduleDir = reverse_str(reverse_str(docDir).replace(reverse_str(moduleDir),''));
+			return moduleDir;
+		}
+		return '';
+	}
+
     /**
         reverse a string
     */
