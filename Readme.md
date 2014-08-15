@@ -1,6 +1,13 @@
 # QuickDocsJS
 This extension provides a quick documentation to each JavaScript function.
 It supports JSDoc comments since v1.2 and some requirejs stuff (v1.4)
+The extension tries to get the correct documentation if the function is available for strings and arrays.
+```javascript
+var abc = 'abc';
+var pos = abc.indexOf('a'); // the documentation for String.indexOf 
+var parts = abc.split('');
+pos = parts.indexOf('a'); // the documentation for Array.indexOf
+```
 
 ## How to use
 You can use the Navigation menu or ```Ctrl+K``` (Windows) or ```CMD+K``` (Mac), while your cursor is on a JavaScript function, to open the inline documentation.
