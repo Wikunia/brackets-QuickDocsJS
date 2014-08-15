@@ -62,7 +62,8 @@ define(function(require, exports, module) {
 								tags = getTags(func,"RegExp");
 								func_class = "Global_Objects/RegExp";
 							}
-						} else if (func.variable_type in ["Array","global","Math","RegExp","Statements","String"]) { // if the variable type file exists
+							// if the variable type file exists
+						} else if (["Array","global","Math","RegExp","Statements","String"].indexOf(func.variable_type) >= 0) {
 							tags = getTags(func,func.variable_type);
 							func_class = "Global_Objects/"+func.variable_type;
 						}
@@ -208,7 +209,8 @@ define(function(require, exports, module) {
     /**
         Gets the function name and the type of the function
         @param content  {string} content of document
-        @param pos      {Object} cursor position (pos.ch and pos.line)
+        @param pos      {Object} cursor position
+								  (pos.ch and pos.line)
 		@param currentMod {string} currentModule directory
         @return object (func.name,func.type,func.variable,func.variable_type)
     */
@@ -606,7 +608,7 @@ define(function(require, exports, module) {
 	/**
     * user defined functions can documentated with JavaDoc
     * @param content
-    * @param func       {object}       function (includs func.name)
+    * @param func       {object}  function (includs func.name)
     * @return tags object
     */
     function get_userdefined_tags(content,func) {
@@ -631,6 +633,8 @@ define(function(require, exports, module) {
 				// prototype
 				if (matches[7] == func.variable_type) {
 					var match_func = matches[8].trim();
+				} else {
+					continue; // try next function
 				}
 			} else {
 				break;
@@ -638,34 +642,35 @@ define(function(require, exports, module) {
 			var end_func_name = match_func.search(/( |\(|$)/);
 			var match_func = match_func.substring(0,end_func_name).trim();
             if (match_func === func.name) {
-                var lines = matches[0].split(/[\n\r]/);
-                // until the first @ it's description 
-                // afterwards the description can't start again
-                var canbe_des = true; // can be description
-                var params = [];
-                // first line is /**, and last two ones are */ \n function
-                for (var i = 1; i < lines.length-2; i++) {
+                var lines  = matches[0].split(/[\n\r]/);
+				// get the comment without * at the beginning of a line
+				var comment = '';
+				lines = lines.slice(1);  // without the / * * at the end /beginning
+				for (var i = 0; i < lines.length; i++) {
                     lines[i] = lines[i].trim(); // trim each line
-					if (lines[i].substr(0,2) == "*/") break;
+					if (lines[i].substr(0,2) == "*/") { lines = lines.slice(0,i); break; }
                     lines[i] = lines[i].replace(/^\*/,'').trim(); // delete * at the beginning and trim line again
-                    
-                    // no @ => decription part 
-                    if (lines[i].substr(0,1) !== '@' && canbe_des) {
-                        if (tags.s && lines[i]) {
-                            tags.s += '<br>' + lines[i]; // add to summary part
-                        } else if (!tags.s) {
-                            tags.s = lines[i];
-                        }
-                    }
-                    tags.y = ''; // syntax is empty for this
-                    
-                    // get params
-                    if (lines[i].substr(0,6) === '@param') {
-                        canbe_des = false; // description tag closed
-                        var param_parts = lines[i].split(/(?:\s+)/);
-                        var param_type = '';
+				}
+				comment = lines.join('\n');
+				var commentTags = comment.split('@');
 
-                        // 0 = @param, 1 = title, 2-... = description
+
+
+				tags.s = commentTags[0].replace(/\r?\n/g, '<br />'); // the first (without @ is the description/summary)
+				tags.y = ''; // no syntax for userdefined functions
+
+				var params = [];
+				for (var i = 1; i < commentTags.length; i++) {
+                    // get params
+                    if (commentTags[i].substr(0,5) === 'param') {
+                        var param_parts = commentTags[i].split(/(\s)+/);
+
+                        var param_type = '';
+						var delimiters = param_parts.filter(function(v,i) { return ((i % 2) === 1); });
+						param_parts = param_parts.filter(function(v,i) { return ((i % 2 === 0)); });
+
+
+                        // 0 = param, 1 = title, 2-... = description
                         // 1,2 can be the type (inside {})
 						if (param_parts[2]) {
 							if (param_parts[1].substr(0,1) == '{' && param_parts[1].substr(-1) == '}') {
@@ -688,19 +693,19 @@ define(function(require, exports, module) {
 								var j_start = 3;
 							}
 							for (var j = j_start; j < param_parts.length; j++) {
-								description += ' ' + param_parts[j];
+								description += delimiters[j-1] + param_parts[j];
 							}
 						} else {
 							var param_title = param_parts[1];
 							var description = '';	
 						}
-                        params.push({'t':param_title,'d':description,'type':param_type});
+                        params.push({'t':param_title,'d':description.replace(/\r?\n/g,'<br />'),'type':param_type});
                     }
-                    if (lines[i].substr(0,7) === '@return') {
-						if (lines[i].substr(0,8) === '@returns') {
-							var  return_tag = lines[i].substr(8).trim(); // delete @return and trim
+                    if (commentTags[i].substr(0,6) === 'return') {
+						if (commentTags[i].substr(0,7) === 'returns') {
+							var  return_tag = commentTags[i].substr(7).trim(); // delete returns and trim
 						} else {
-                        	var  return_tag = lines[i].substr(7).trim(); // delete @return and trim
+                        	var  return_tag = commentTags[i].substr(6).trim(); // delete return and trim
 						}
 						if(return_tag.charAt(0) == '{') {
 							var endCurly = return_tag.indexOf('}');
@@ -713,6 +718,7 @@ define(function(require, exports, module) {
                 tags.p = params;
                 return tags;
             }
+
          }
         return null;   
     }
