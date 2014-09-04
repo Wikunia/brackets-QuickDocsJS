@@ -27,9 +27,9 @@ QuickDocsJS supports prototype functions:
 /**
  * split a string into an array with limit entries
  * The last entry contains the last part of the string, which can contain the separator)
- * @param separator {string} string separator
- * @param limit {integer} number of entries in the array
- * @return array of separated strings
+ * @param {String} separator string separator
+ * @param {Integer} limit number of entries in the array
+ * @return {Array} array of separated strings
  */
 String.prototype.splitLimit = function(separator,limit) {
 	var splitString = this;
@@ -45,13 +45,13 @@ String.prototype.splitLimit = function(separator,limit) {
 ```
 
 ## v 1.2
-It's now possible to get documentations for your own functions using JavaDoc.
+It's now possible to get documentations for your own functions using JSDoc.
 ```
     /**
         get the type of a variable
-        @param content content of document
-        @param variable name of the variable
-        @return type of the variable: unknown,String,Array or RegExp
+        @param {String} content content of document
+        @param {String} variable name of the variable
+        @returns {String} type of the variable: unknown,String,Array or RegExp
     */
     function getVariableType (content, variable) {
 ```
