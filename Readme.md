@@ -1,7 +1,11 @@
 # QuickDocsJS
-This extension provides a quick documentation to each JavaScript function.
-It supports JSDoc comments since v1.2 and some requirejs stuff (v1.4)
+This extension provides a quick documentation for each JavaScript function.
+It supports JSDoc comments since v1.2 and some requirejs stuff (v1.4).
+
+Maybe you want to check out my [FuncDocr](https://github.com/Wikunia/brackets-FuncDocr) extension to generate JSDocs for your own functions.
+
 The extension tries to get the correct documentation if the function is available for strings and arrays.
+
 ```javascript
 var abc = 'abc';
 var pos = abc.indexOf('a'); // the documentation for String.indexOf 
