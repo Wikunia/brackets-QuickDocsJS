@@ -38,10 +38,10 @@ define(function(require, exports, module) {
             return null;
         }
         
-        var currentMod = getCurrentModuleDir(docDir,currentDoc);
+        var currentModDir = getcurrentModDiruleDir(docDir,currentDoc);
         
         // get func.name and func.type ('.' or 'Math.')
-        var func = get_func_name(currentDoc,sel.start,currentMod);
+        var func = get_func_name(currentDoc,sel.start,currentModDir);
 
         // if a function was selected
         if (func) {
@@ -106,7 +106,7 @@ define(function(require, exports, module) {
 				}
 
 			} else {
-				var modContent = getModuleContent(docDir,func.mod,currentMod);
+				var modContent = getModuleContent(func.mod,currentModDir);
 				modContent.done(function(content) {
 					var tags = get_userdefined_tags(content,func);
 					if (tags) {
@@ -176,11 +176,11 @@ define(function(require, exports, module) {
     }
     
     /**
-    * Read the type.json file and return tags
-    * @param func {string} function name
-    * @param type {string} function type ('String','Array','Math','RegExp','global','Statements')
-    * @return tags if the function exists, null otherwiese
-    */
+     * Read the type.json file and return tags
+     * @param   {String} func function name
+     * @param   {String} type function type ('String','Array','Math','RegExp','global','Statements')
+     * @returns {Object} tags if the function exists, null otherwiese
+     */
     function getTags(func,type) {
         // Initialize the Ajax request
         var xhr = new XMLHttpRequest();
@@ -207,14 +207,14 @@ define(function(require, exports, module) {
 
 
     /**
-        Gets the function name and the type of the function
-        @param content  {string} content of document
-        @param pos      {Object} cursor position
-								  (pos.ch and pos.line)
-		@param currentMod {string} currentModule directory
-        @return object (func.name,func.type,func.variable,func.variable_type)
-    */
-    function get_func_name(content,pos,currentMod) {
+     * Gets the function name and the type of the function
+     * @param   {string} content    content of document
+     * @param   {Object} pos        cursor position
+     *                              (pos.ch and pos.line)
+     * @param   {string} currentModDir currentModDirule directory
+     * @returns {object} (func.name,func.type,func.variable,func.variable_type)
+     */
+    function get_func_name(content,pos,currentModDir) {
         // get the content of each line
         var lines = content.split("\n");
         // get the content of the selected line
@@ -333,7 +333,7 @@ define(function(require, exports, module) {
                         func.variable_type = 'unknown';
                     } else {
                          // try to get the VariableType ('String','Array','RegExp','unknown'
-						var varType = getVariableType(content,func.variable,pos);
+						var varType = getVariableType(content,func.variable,pos,currentModDir);
                         func.variable_type = varType.type;
 						if (varType.mod) {
 							func.mod = varType.mod;
@@ -375,15 +375,15 @@ define(function(require, exports, module) {
     }
     
     /**
-        get the type of a variable or the module
-		it's important for functions which exists for strings and arrays
-        @param content  {string} content of document
-        @param variable {string} name of the variable
-		@param pos {object} current cursor position
-		@parem currentMod {string} currentModule directory (empty if no requirejs)
-        @return object (type of the variable: unknown,String,Array or RegExp, mod: modul name else '')
-    */
-    function getVariableType (content, variable,pos, currentMod) {
+     * get the type of a variable or the module
+     * it's important for functions which exists for strings and arrays
+     * @param   {String} content       content of document
+     * @param   {String} variable      name of the variable
+     * @param   {Object} pos           current cursor position
+     * @param   {String} currentModDir currentModDirule directory (empty if no requirejs)
+     * @returns {Object} (type of the variable: unknown,String,Array or RegExp, mod: modul name else '')
+     */
+    function getVariableType (content, variable,pos, currentModDir) {
         // get the declaration for this variable 
         // can be a ',' between two declarations
         var regex = new RegExp('var [^;]*?' + variable + '\\s*?=','');
@@ -405,7 +405,7 @@ define(function(require, exports, module) {
 				// could be a function parameter
 				// check for requirejs (define)
 				var before = content.split("\n",pos.line);
-				var result = getModule(content,before,variable);
+				var result = getModuleForVariable(content,before,variable);
 				if (result && "mod" in result) {
 					return result;
 				}
@@ -461,23 +461,20 @@ define(function(require, exports, module) {
 			}
 		}
 
-
     
         // get declaration value
         // substr(pos).search(regex)+pos = indexOf(regex,pos)
         var value = content.substr(pos+match_len,content.substr(pos+match_len).search(/[;,]/));
         value = value.trim();
-        
+
 		// check for 'new' declaration
 		var newRegex = /^new\s+?([a-z]*)/i;
 		var objectName = newRegex.exec(value);
 		if (objectName) {
-			if (currentMod != '') { // if the current file is a requirejs module and the variable refers to a module
-				var before = content.split("\n",pos.line);
-				var result = getModule(content,before,objectName[1]);
-				if (result.mod) {
-					return result;
-				}
+			var before = content.split("\n",pos.line);
+			var result = getModuleForVariable(content,before,objectName[1]);
+			if (result.mod) {
+				return result;
 			} else {
 				return {type:objectName[1]};
 			}
@@ -538,21 +535,23 @@ define(function(require, exports, module) {
     
 	/**
 	 * Get the correct module for a specific variable
-	 * @param content {string} content of the current document
-	 * @param before {array} lines before current cursor Pos
-	 * @param variable {string} module variable
-	 * @return module
+	 * @param   {String} content  content of the current document
+	 * @param   {Array}  before   lines before current cursor Pos
+	 * @param   {String} variable module variable
+	 * @returns {module} module
 	 */
-	function getModule(content,before,variable) {
-		var defineBool = false;
-		for(var i = 0; i < before.length; i++) {
-			if (before[i].indexOf('define') !== -1) {
-				defineBool = true;
-				var defineLine = i;
-				break;
+	function getModuleForVariable(content,before,variable) {
+		// check for define requires
+		var DEFINE_REGEX = /define\s*?\(\s*?(?:'(?:.*?)'\s*,\s*)?\[/mi;
+
+		if (DEFINE_REGEX.test(before.join('\n'))) {
+			for(var i = 0; i < before.length; i++) {
+				if (before[i].indexOf('define') !== -1) {
+					var defineLine = i;
+					break;
+				}
 			}
-		}
-		if (defineBool) {
+
 			var definePos = content.indexOf('define');
 			var define = content.substr(content.indexOf('(',definePos)+1);
 
@@ -598,8 +597,15 @@ define(function(require, exports, module) {
 					modules = modules.substring(modules.indexOf("'")+1,modules.lastIndexOf("'"));
 					// correct module name:
 					modules = modules.split(/'\s*?,\s*?'/);
-					return {type: 'unknown', mod: modules[paramNr]};
+					return {type: modules[paramNr], mod: modules[paramNr]};
 				}
+			}
+		} else { // maybe it's only a require
+			// check for // variable	   = require('...');
+			var REGEX_REQUIRE = new RegExp(variable+'\\s*=\\s*require\\(\'(.*?)\'\\)');
+			var match = REGEX_REQUIRE.exec(before);
+			if (match) {
+				return {type: match[1], mod: match[1]};
 			}
 		}
 		return false;
@@ -727,12 +733,11 @@ define(function(require, exports, module) {
 	/**
 	 * Get the content of a special modul
 	 * For that iterate through all js files
-	 * @param docDir directory of current document
-	 * @param moduleName name of the js module
-	 * @param currentModuleName name of the current module
-	 * @return content The content of the js module file
+	 * @param   {String} moduleName name of the js module
+	 * @param   {String} moduleDir  module directory
+	 * @returns {String} The content of the js module file
 	 */
-	function getModuleContent(docDir,moduleName,currentModuleName) {
+	function getModuleContent(moduleName,moduleDir) {
 	    function getJSFiles(file) {
             if (file._name.substr(-3) == ".js") return true;
         }
@@ -746,7 +751,7 @@ define(function(require, exports, module) {
 				var sortedFiles = [];
 				var content = false;
 				files.forEach(function(file) {
-					if (file._path == (currentModuleName+moduleName+'.js')) {
+					if (file._path == (moduleDir+moduleName+'.js')) {
 						content = getModuleContentIterator(file,moduleName);
 						return true;
 					}
@@ -803,9 +808,10 @@ define(function(require, exports, module) {
 	 * @param {string} docDir current directory
 	 * @param {string} content content of the current file
 	 */
-	function getCurrentModuleDir(docDir,content) {
+	function getcurrentModDiruleDir(docDir,content) {
 		var match = /define\s*?\(\s*?'(.*?)'/gmi;
 		var matches = match.exec(content);
+
 		if (matches) {
 			var moduleName = matches[1];
 			var lastSlash;
@@ -813,7 +819,7 @@ define(function(require, exports, module) {
 			moduleDir = reverse_str(reverse_str(docDir).replace(reverse_str(moduleDir),''));
 			return moduleDir;
 		}
-		return '';
+		return docDir;
 	}
 
     /**
