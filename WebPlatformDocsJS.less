@@ -147,13 +147,8 @@
     clear: both;
 }
 
-/* Link to full docs, at bottom */
-a.more-info {
-    position: absolute;
-    bottom: 0px;
-    right: (33px + @scrollbar-wid);
-    padding: 4px 10px 4px 10px;
-    
+
+a.bottom-link {
     background: #e5e9e9;
     background-repeat: no-repeat;
     background-size: 15px 15px;
@@ -174,60 +169,81 @@ a.more-info {
     }
 }
 
+/* Link to full docs, at bottom */
+a#more-info {
+    position: absolute;
+    bottom: 0px;
+    right: (33px + @scrollbar-wid);
+    padding: 4px 10px 4px 10px;
+}
+
 
 /* Link to license */
-a.license-js-info {
+a#license-js-info {
     position: absolute;
     bottom: 0px;
     left: 85px;
-    
-    padding: 4px 10px 4px 10px;
-    
-    background: #e5e9e9;
-    background-repeat: no-repeat;
-    background-size: 15px 15px;
-    background-position: 8px 4px;
-    
-    border: 1px solid #9c9e9e;
-    border-radius: 3px 3px 0 0;
-    border-bottom: none;
-    box-shadow: inset 0 1px 0 white;  // white chisel along top edge
-    
-    font-size: 12px;
-    font-weight: @font-weight-semibold;
-    color: @heading-color;
-    text-shadow: 0 1px 0 white;
-    &:hover {
-        background-color: #edf1f1;
-        text-decoration: none;
-    }
+	 padding: 4px 10px 4px 10px;
 }
 
 
 
 /* Link to developer.mozilla.org */
-a.js-info {
+a#js-info {
     position: absolute;
     bottom: 0px;
     left: 10px;
     padding: 4px 10px 4px 10px;
-    
-    background: #e5e9e9;
-    background-repeat: no-repeat;
-    background-size: 15px 15px;
-    background-position: 8px 4px;
-    
-    border: 1px solid #9c9e9e;
-    border-radius: 3px 3px 0 0;
-    border-bottom: none;
-    box-shadow: inset 0 1px 0 white;  // white chisel along top edge
-    
-    font-size: 12px;
-    font-weight: @font-weight-semibold;
-    color: @heading-color;
-    text-shadow: 0 1px 0 white;
-    &:hover {
-        background-color: #edf1f1;
-        text-decoration: none;
+}
+
+
+/* Dark UI Theme */
+@dark-bc-bg-highlight: #1671db;
+@dark-bc-highlight: rgba(255, 255, 255, 0.06);
+@dark-bc-text: #ddd;
+@dark-bc-text-link: #6bbeff;
+@dark-bc-text-thin-quiet: #bbb;
+@dark-bc-highlight-hard: rgba(255, 255, 255, 0.1);
+@dark-bc-btn-bg: #3f3f3f;
+@dark-bc-btn-border: #202020;
+@dark-bc-btn-border-focused: #2893ef;
+@dark-bc-btn-border-focused-glow: transparent;
+@dark-bc-shadow: rgba(0, 0, 0, 0.24);
+@dark-bc-shadow-small: rgba(0, 0, 0, 0.06);
+@dark-bc-shadow-medium: rgba(0, 0, 0, 0.12);
+@dark-bc-input-bg: #555;
+@dark-bc-panel-separator: #343434;
+
+.dark {
+    .js-prop-defn {
+        color: @dark-bc-text-thin-quiet;
+
+        h1, b {
+            color: @dark-bc-text;
+        }
+
+        a {
+            color: @dark-bc-text-link;
+        }
+
+        code {
+            color: @dark-bc-text;
+        }
+
+        dl dt {
+            color: @dark-bc-text;
+        }
+
+        .divider-holder .divider {
+            border-left: 1px solid @dark-bc-panel-separator;
+        }
+
+        a.bottom-link{
+            background-color: @dark-bc-btn-bg;
+            border: 1px solid @dark-bc-btn-border;
+            box-shadow: inset 0 1px 0 @dark-bc-highlight;
+            color: @dark-bc-text;
+            text-shadow: 0 1px 0 @dark-bc-highlight;
+        }
     }
 }
