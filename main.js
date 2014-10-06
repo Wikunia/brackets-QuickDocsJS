@@ -620,7 +620,7 @@ define(function(require, exports, module) {
     function get_userdefined_tags(content,func) {
         var tags = new Object();
 		// global,multiline,insensitive
-        var regex = /\/\*\*(?:[ \t]*)[\n\r](?:[\s\S]*?)\*\/(?:[ \t<]*)[\n\r]*?(?:[ \t]*)(var (.*)=[ \(]*?function(.*)|function (.*?)|(.*?):\s*?function(.*?)|(.*?)\.prototype\.(.*?)\s*?=\s*?function(.*?))(\n|\r|$)/gmi;
+        var regex = /\/\*\*(?:[ \t]*)[\n\r](?:[\s\S]*?)\*\/(?:[ \t<]*)[\n\r]*?(?:[ \t]*)(var (.*)=[ \(]*?function(.*)|function (.*?)|(.*?):\s*?function(.*?)|([^.]*?)\.(prototype\.)?([^.]*?)\s*?=\s*?function(.*?))(\n|\r|$)/gmi;
       
 		var matches = null;
 
@@ -629,16 +629,24 @@ define(function(require, exports, module) {
              // matches[2] = '''function_name''' or matches[4] if matches[2] undefined or matches[5] if both undefined
             // get the function name
 			// start_pos
+			for (var i = 0; i < matches.length; i++) {
+				if (matches[i]) {
+					matches[i] = matches[i].trim();
+				}
+			}
+
 			if (matches[2]) {
 				var match_func = matches[2].trim();
 			} else if (matches[4]) {
 				var match_func = matches[4].trim();	
 			} else if (matches[5]) {
 				var match_func = matches[5].trim();
-			}  else if (matches[8]) {
-				// prototype
-				if (matches[7] == func.variable_type) {
-					var match_func = matches[8].trim();
+			}  else if (matches[7]) {
+				// prototype or static
+				if (matches[7] == func.variable_type && matches[8] == "prototype.") {
+					var match_func = matches[9];
+				} else if (matches[7] == func.variable && !matches[8]) {
+					var match_func = matches[9];
 				} else {
 					continue; // try next function
 				}
@@ -646,7 +654,9 @@ define(function(require, exports, module) {
 				break;
 			}
 			var end_func_name = match_func.search(/( |\(|$)/);
-			var match_func = match_func.substring(0,end_func_name).trim();
+			if (end_func_name >= 0) {
+				match_func = match_func.substring(0,end_func_name).trim();
+			}
             if (match_func === func.name) {
                 var lines  = matches[0].split(/[\n\r]/);
 				// get the comment without * at the beginning of a line
