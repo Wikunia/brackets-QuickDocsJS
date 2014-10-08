@@ -480,6 +480,20 @@ define(function(require, exports, module) {
 			}
 		}
 
+		// check for normal 'require' declaration i.e var variable = require('...')
+		var requireRegex = /^require\('(.*?)'\)/;
+		var requireName = requireRegex.exec(value);
+		if (requireName) {
+			var before = content.split("\n",pos.line);
+			var result = getModuleForVariable(content,before,variable);
+			if (result.mod) {
+				return result;
+			} else {
+				return {type:objectName[1]};
+			}
+		}
+
+
         // split the declaration into parts
         var value_parts = value.split(".");
         // if the declaration is like variablename.function[.function,...]
@@ -604,6 +618,7 @@ define(function(require, exports, module) {
 			// check for // variable	   = require('...');
 			var REGEX_REQUIRE = new RegExp(variable+'\\s*=\\s*require\\(\'(.*?)\'\\)');
 			var match = REGEX_REQUIRE.exec(before);
+
 			if (match) {
 				return {type: match[1], mod: match[1]};
 			}
@@ -623,7 +638,6 @@ define(function(require, exports, module) {
         var regex = /\/\*\*(?:[ \t]*)[\n\r](?:[\s\S]*?)\*\/(?:[ \t<]*)[\n\r]*?(?:[ \t]*)(var (.*)=[ \(]*?function(.*)|function (.*?)|(.*?):\s*?function(.*?)|([^.]*?)\.(prototype\.)?([^.]*?)\s*?=\s*?function(.*?))(\n|\r|$)/gmi;
       
 		var matches = null;
-
         while (matches = regex.exec(content)) {
             // matches[0] = all
              // matches[2] = '''function_name''' or matches[4] if matches[2] undefined or matches[5] if both undefined
