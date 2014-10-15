@@ -136,6 +136,7 @@ define(function(require, exports, module) {
 
 
 		function sendToInlineViewer(hostEditor,tags,func,url) {
+			console.log(tags);
 			if (tags.s != "" || tags.p) {
 				var summary = tags.s;
                     var syntax = tags.y.replace(/\n/g,'<br>');
@@ -167,7 +168,12 @@ define(function(require, exports, module) {
 
 
                     var result = new $.Deferred();
-                    var inlineWidget = new InlineDocsViewer(func.name,{SUMMARY:summary, SYNTAX: syntax, RETURN: tags.r, URL:url, VALUES:parameters});
+                    var inlineWidget = new InlineDocsViewer(
+										func.name,
+										{
+											SUMMARY:summary,SYNTAX: syntax,RETURN: tags.r, URL:url, VALUES:parameters
+										}
+									);
                     inlineWidget.load(hostEditor);
                     result.resolve(inlineWidget);
                     return result.promise();
@@ -634,13 +640,13 @@ define(function(require, exports, module) {
     */
     function get_userdefined_tags(content,func) {
         var tags = new Object();
-		// global,multiline,insensitive
+		// global,multiline,caseinsensitive
         var regex = /\/\*\*(?:[ \t]*)[\n\r](?:[\s\S]*?)\*\/(?:[ \t<]*)[\n\r]*?(?:[ \t]*)(var (.*)=[ \(]*?function(.*)|function (.*?)|(.*?):\s*?function(.*?)|([^.]*?)\.(prototype\.)?([^.]*?)\s*?=\s*?function(.*?))(\n|\r|$)/gmi;
       
 		var matches = null;
         while (matches = regex.exec(content)) {
             // matches[0] = all
-             // matches[2] = '''function_name''' or matches[4] if matches[2] undefined or matches[5] if both undefined
+            // matches[2] = '''function_name''' or matches[4] if matches[2] undefined or matches[5] if both undefined
             // get the function name
 			// start_pos
 			for (var i = 0; i < matches.length; i++) {
@@ -729,7 +735,25 @@ define(function(require, exports, module) {
 							var param_title = param_parts[1];
 							var description = '';	
 						}
-                        params.push({'t':param_title,'d':description.replace(/\r?\n/g,'<br />'),'type':param_type});
+						var optional = false;
+						var defaultValue;
+						// a param title can start with a [ and ends with ] => optional parameter
+						if (param_title.charAt(0) == '[' && param_title.charAt(param_title.length-1) == ']') {
+							optional = true;
+							param_title = param_title.substring(1,param_title.length-1);
+							var optional_parts = param_title.split('=');
+							if (optional_parts.length == 2) {
+								param_title = optional_parts[0];
+								defaultValue = optional_parts[1];
+							}
+						}
+
+                        params.push({
+							't':param_title,
+							'd':description.replace(/\r?\n/g,'<br />'),
+							'type':param_type,
+							'optional':optional,'default':defaultValue
+						});
                     }
                     if (commentTags[i].substr(0,6) === 'return') {
 						if (commentTags[i].substr(0,7) === 'returns') {

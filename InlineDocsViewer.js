@@ -57,7 +57,21 @@ define(function (require, exports, module) {
         
         // valueInfo.t = title (.d = description)
         var propValues = jsPropDetails.VALUES.map(function (valueInfo) {
-            return { value: valueInfo.t, description: valueInfo.d, type: valueInfo.type };
+			if (valueInfo.optional) {
+				if (typeof valueInfo.default !== "undefined") {
+					valueInfo.default = 'Default: '+valueInfo.default;
+				}
+				valueInfo.cssOptional = 'display:inline;';
+			} else {
+				valueInfo.cssOptional = 'display:none;';
+			}
+            return {
+				name: 			valueInfo.t,
+				description: 	valueInfo.d,
+				type: 			valueInfo.type,
+				default: 		valueInfo.default,
+				cssOptional: 	valueInfo.cssOptional
+			};
         });
 		var returnValues = [{description: jsPropDetails.RETURN.d, type: jsPropDetails.RETURN.type}];
 
