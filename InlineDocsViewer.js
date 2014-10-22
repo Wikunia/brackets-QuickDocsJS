@@ -38,6 +38,8 @@ define(function (require, exports, module) {
         NativeApp           = brackets.getModule("utils/NativeApp"),
         Strings             = brackets.getModule("strings");
     
+	var infoUrl,infoUrlName,licenseUrl,licenseUrlName;
+
     // Load template
     var inlineEditorTemplate = require("text!InlineDocsViewer.html");
     
@@ -89,7 +91,20 @@ define(function (require, exports, module) {
             return_style = 'display: none;';
         }
        
+
+		if (jsPropDetails.URL && jsPropDetails.URL.substr(0, "http://nodejs.org".length) === "http://nodejs.org") {
+			infoUrl 		= "http://nodejs.org";
+			infoUrlName 	= "NodeJS.org";
+			licenseUrl		= "https://raw.githubusercontent.com/joyent/node/v0.10.32/LICENSE";
+			licenseUrlName	= "NodeJS License";
+		} else {
+			infoUrl 		= "https://developer.mozilla.org/";
+			infoUrlName 	= "mozilla.org"
+			licenseUrl		= "https://developer.mozilla.org/en-US/docs/MDN/About#Copyrights_and_licenses";
+			licenseUrlName	= "Creative Commons License";
+		}
         
+
         var templateVars = {
             propName      : jsPropName,
             summary       : jsPropDetails.SUMMARY,
@@ -100,7 +115,11 @@ define(function (require, exports, module) {
             BottomStyle   : bottom_style,
             SyntaxStyle   : syntax_style,
             ReturnStyle   : return_style,
-            Strings       : Strings
+            Strings       : Strings,
+			infoUrl		  : infoUrl,
+			infoUrlName   : infoUrlName,
+			licenseUrl    : licenseUrl,
+			licenseUrlName: licenseUrlName
         };
         
         var html = Mustache.render(inlineEditorTemplate, templateVars);

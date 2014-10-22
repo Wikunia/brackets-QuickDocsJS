@@ -18,7 +18,11 @@ You can use the Navigation menu or ```Ctrl+K``` (Windows) or ```CMD+K``` (Mac), 
 
 ![Example](image/example.png?raw=true)
 
-This extension uses the documentation from [http://developer.mozilla.org](http://developer.mozilla.org).
+This extension uses the documentation from [http://developer.mozilla.org](http://developer.mozilla.org) for JS functions and [http://nodejs.org](http://nodejs.org) for NodeJS functions.
+
+## v 1.5.0
+Support for NodeJS!
+![NodeJS](image/nodeJS.png?raw=true)
 
 ## v 1.4.1
 QuickDocsJS can use require.js `define` statements to get docs by reading other modules.
