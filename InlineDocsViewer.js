@@ -116,7 +116,10 @@ define(function (require, exports, module) {
                 // URLs in JSON data are relative
                 url = "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/" + url;
                 $elem.attr("href", url);
-            }
+            } else if (url) {
+				// URLs in JSON data are relative
+                $elem.attr("href", url);
+			}
             $elem.attr("title", url);
         });
         

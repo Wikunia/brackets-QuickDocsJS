@@ -13,9 +13,14 @@ define(function(require, exports, module) {
 
     var ExtPath = ExtensionUtils.getModulePath(module);
     
+	var JS_CLASSES 		= ["Array","global","Math","RegExp","Statements","String"];
+	var NODE_CLASSES 	= ['child_process','cluster','console','crypto','dns','domain','fs','http',
+						   'https','net','os','path','process','punycode','querystring','readline','repl','timers',
+						   'tls','tty','dgram','url','util','vm','zlib'];
+
     // Extension modules
     var InlineDocsViewer = require("InlineDocsViewer");
- 
+
     
     function inlineProvider(hostEditor, pos) {
 		var result = new $.Deferred();
@@ -45,11 +50,12 @@ define(function(require, exports, module) {
 
         // if a function was selected
         if (func) {
+			func.nodeJS = false;
             var func_class,url;
 			var tags = false;
             if (!("mod" in func)) {
 				switch(func.type) {
-					case ".": // string or Array
+					case ".":
 						// if variable type is unknown
 						if (func.variable_type == 'unknown') {
 							tags = getTags(func,"String");
@@ -63,14 +69,14 @@ define(function(require, exports, module) {
 								func_class = "Global_Objects/RegExp";
 							}
 							// if the variable type file exists
-						} else if (["Array","global","Math","RegExp","Statements","String"].indexOf(func.variable_type) >= 0) {
+						} else if (JS_CLASSES.indexOf(func.variable_type) >= 0) {
 							tags = getTags(func,func.variable_type);
 							func_class = "Global_Objects/"+func.variable_type;
 						}
 						break;
 					case "Math.": // Math functions
 						tags = getTags(func,"Math");
-						 func_class = "Global_Objects/Math";
+						func_class = "Global_Objects/Math";
 						break;
 					case "RegExp.": // RegExp functions
 						tags = getTags(func,"RegExp");
@@ -120,8 +126,26 @@ define(function(require, exports, module) {
 					} else {
 						result.reject();
 					}
-				}).fail(function() {
-					return result.reject();
+				}).fail(function(errorCode) {
+					if (errorCode == "noFile") {
+						// try nodeJS
+						if (NODE_CLASSES.indexOf(func.variable_type) >= 0) {
+							tags = getTags(func,'nodejs/'+func.variable_type);
+							func_class = "NodeJS/"+func.variable_type;
+							if (tags && tags.y) {
+								url = 'http://nodejs.org/docs/v0.10.32/api/'+func.variable_type+'.html';
+								url += '#'+func.variable_type+'_';
+								url += tags.y.replace(/[ ,-.\[\]()]+/g,'_').replace(/_+$/,'').toLowerCase();
+								func.nodeJS = true;
+								var inlineViewer = sendToInlineViewer(hostEditor,tags,func,url);
+								inlineViewer.done(function(inlineWidget) {
+									result.resolve(inlineWidget);
+								});
+							}
+						}
+					}
+					if (!tags)
+						return result.reject();
 				});
 			}
 
@@ -136,7 +160,6 @@ define(function(require, exports, module) {
 
 
 		function sendToInlineViewer(hostEditor,tags,func,url) {
-			console.log(tags);
 			if (tags.s != "" || tags.p) {
 				var summary = tags.s;
                     var syntax = tags.y.replace(/\n/g,'<br>');
@@ -154,7 +177,7 @@ define(function(require, exports, module) {
                     func.name = func.name.replace(/___/,'...');
                     
                     // generate url for read more if func_class isn't user_defined
-                    if (url) {
+                    if (url === true) {
 						url = func_class+'/'+func.name;
 					}
 
@@ -184,7 +207,7 @@ define(function(require, exports, module) {
     /**
      * Read the type.json file and return tags
      * @param   {String} func function name
-     * @param   {String} type function type ('String','Array','Math','RegExp','global','Statements')
+     * @param   {String} type function type where to finde the json file inside the dir "docs" i.e Array or nodejs/assert
      * @returns {Object} tags if the function exists, null otherwiese
      */
     function getTags(func,type) {
@@ -806,6 +829,8 @@ define(function(require, exports, module) {
 				});
 				if (content) {
 					return result.resolve(content);
+				} else {
+					result.reject('noFile');
 				}
 			})
 			.fail(function () {
