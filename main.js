@@ -3,12 +3,13 @@ var language = brackets.getLocale().substr(0,2);
 define(function(require, exports, module) {
      "use strict";
  
-    var KeyBindingManager = brackets.getModule("command/KeyBindingManager"),
-    EditorManager = brackets.getModule("editor/EditorManager"),
-    DocumentManager = brackets.getModule("document/DocumentManager"),
-    ExtensionUtils = brackets.getModule("utils/ExtensionUtils"),
-	FileSystem          = brackets.getModule("filesystem/FileSystem"),
-	FileUtils           = brackets.getModule("file/FileUtils"),
+    var KeyBindingManager 	= brackets.getModule("command/KeyBindingManager"),
+    EditorManager 			= brackets.getModule("editor/EditorManager"),
+    DocumentManager 		= brackets.getModule("document/DocumentManager"),
+    ExtensionUtils 			= brackets.getModule("utils/ExtensionUtils"),
+	JSUtils                 = brackets.getModule("language/JSUtils"),
+	FileSystem          	= brackets.getModule("filesystem/FileSystem"),
+	FileUtils           	= brackets.getModule("file/FileUtils"),
 	ProjectManager          = brackets.getModule("project/ProjectManager");
 
     var ExtPath = ExtensionUtils.getModulePath(module);
@@ -145,10 +146,18 @@ define(function(require, exports, module) {
 						}
 					}
 					if (!tags)
-						return result.reject();
+						tryJSUtils(func).done(function(data) {
+							tags = data;
+							var url = false;
+							var inlineViewer = sendToInlineViewer(hostEditor,tags,func,url);
+							inlineViewer.done(function(inlineWidget) {
+								result.resolve(inlineWidget);
+							});
+						}).fail(function(errorCode) {
+							result.reject();
+						});
 				});
 			}
-
 			if (result.state() == "rejected") {
 				return null;
 			}
@@ -158,48 +167,63 @@ define(function(require, exports, module) {
         	return null;
 		}
 
+		function tryJSUtils(func) {
+			var result = $.Deferred();
+			findFunctionInProject(func.name).done(function(functionArray) {
+				var content = getContentSync(functionArray.document.file._path);
+				var tags = get_userdefined_tags(content,func);
+				if (tags) {
+					result.resolve(tags);
+				} else {
+					result.reject();
+				}
+			}).fail(function(errorCode) {
+				result.reject();
+			})
+			return result.promise();
+		}
+
 
 		function sendToInlineViewer(hostEditor,tags,func,url) {
 			if (tags.s != "" || tags.p) {
 				var summary = tags.s;
-                    var syntax = tags.y.replace(/\n/g,'<br>');
-                    // indent code if it has space(s) at the beginning of the line
-                    syntax = syntax.replace(/<br>\s(.*?).(.*?)(<br>|$)/g,'<br><p style="margin:0 auto; text-indent:2em;">$2</p>');
+				var syntax = tags.y.replace(/\n/g,'<br>');
+				// indent code if it has space(s) at the beginning of the line
+				syntax = syntax.replace(/<br>\s(.*?).(.*?)(<br>|$)/g,'<br><p style="margin:0 auto; text-indent:2em;">$2</p>');
 
-                    
-                    // check if function has parameters
-                    if (tags.p) { 
-                        var parameters = tags.p;
-                    } else {
-                        var parameters = eval("[{}]");   
-                    }
-                    // if___else and some other functions back to if...elese
-                    func.name = func.name.replace(/___/,'...');
-                    
-                    // generate url for read more if func_class isn't user_defined
-                    if (url === true) {
-						url = func_class+'/'+func.name;
+
+				// check if function has parameters
+				if (tags.p) {
+					var parameters = tags.p;
+				} else {
+					var parameters = eval("[{}]");
+				}
+				// if___else and some other functions back to if...elese
+				func.name = func.name.replace(/___/,'...');
+
+				// generate url for read more if func_class isn't user_defined
+				if (url === true) {
+					url = func_class+'/'+func.name;
+				}
+
+				if (tags.r) {
+					if (typeof tags.r.d == 'undefined') {
+						tags.r = {d:tags.r,type:''};
 					}
+				} else {
+					tags.r = {};
+				}
 
-					if (tags.r) {
-						if (typeof tags.r.d == 'undefined') {
-							tags.r = {d:tags.r,type:''};
-						}
-					} else {
-						tags.r = {};
-					}
-
-
-                    var result = new $.Deferred();
-                    var inlineWidget = new InlineDocsViewer(
-										func.name,
-										{
-											SUMMARY:summary,SYNTAX: syntax,RETURN: tags.r, URL:url, VALUES:parameters
-										}
-									);
-                    inlineWidget.load(hostEditor);
-                    result.resolve(inlineWidget);
-                    return result.promise();
+				var result = new $.Deferred();
+				var inlineWidget = new InlineDocsViewer(
+									func.name,
+									{
+										SUMMARY:summary,SYNTAX: syntax,RETURN: tags.r, URL:url, VALUES:parameters
+									}
+								);
+				inlineWidget.load(hostEditor);
+				result.resolve(inlineWidget);
+				return result.promise();
 			}
 		}
     }
@@ -855,17 +879,7 @@ define(function(require, exports, module) {
 					if (file._contents) {
 						result = file._contents;
 					} else {
-						var xhr = new XMLHttpRequest();
-						// false => synchron
-						xhr.open('get',file._path, false);
-
-						// Send the request
-						xhr.send(null);
-
-						if(xhr.status === 0){
-							var text = xhr.responseText;
-							result = text;
-						}
+						result = getContentSync(file._path);
 					}
 				}
 			}
@@ -876,6 +890,19 @@ define(function(require, exports, module) {
 		return false;
 	}
     
+	function getContentSync(filePath) {
+		var xhr = new XMLHttpRequest();
+		// false => synchron
+		xhr.open('get',filePath, false);
+
+		// Send the request
+		xhr.send(null);
+
+		if(xhr.status === 0){
+			return xhr.responseText;
+		} else return false;
+	}
+
 	/**
 	 * Get the directory of the current requirejs module
 	 * @param {string} docDir current directory
@@ -907,7 +934,93 @@ define(function(require, exports, module) {
 		.replace(/([^\\])\//g, '$1\\\/');
 	}
 
+	function findFunctionInProject(functionName) {
+        // Use Tern jump-to-definition helper, if it's available, to find InlineEditor target.
+        var helper = brackets._jsCodeHintsHelper;
+        if (helper === null) {
+            return null;
+        }
 
+        var result = new $.Deferred();
+
+        var response = helper();
+        if (response.hasOwnProperty("promise")) {
+            response.promise.done(function (jumpResp) {
+                var resolvedPath = jumpResp.fullPath;
+                if (resolvedPath) {
+
+                    // Tern doesn't always return entire function extent.
+                    // Use QuickEdit search now that we know which file to look at.
+                    var fileInfos = [];
+                    fileInfos.push({name: jumpResp.resultFile, fullPath: resolvedPath});
+                    JSUtils.findMatchingFunctions(functionName, fileInfos, true)
+                        .done(function (functions) {
+                            if (functions && functions.length > 0) {
+                               result.resolve(functions[0]);
+                            } else {
+                                console.log('no function found');
+                                result.reject();
+                            }
+                        })
+                        .fail(function () {
+                            result.reject();
+                        });
+
+                } else {        // no result from Tern.  Fall back to _findInProject().
+
+                    findFunctionWithoutTern(functionName).done(function (functions) {
+                        if (functions && functions.length > 0) {
+                           result.resolve(functions[0]);
+                        } else {
+                           	console.log('no function found');
+                            result.reject();
+                        }
+                    }).fail(function () {
+                        result.reject();
+                    });
+                }
+
+            }).fail(function () {
+                result.reject();
+            });
+
+        }
+
+        return result.promise();
+    }
+
+
+	/*
+     * @param {!string} functionName
+     * @return {$.Promise} a promise that will be resolved with an array of function offset information
+     */
+    function  _findFunctionWithoutTern(functionName) {
+        var result = new $.Deferred();
+
+        PerfUtils.markStart(PerfUtils.JAVASCRIPT_FIND_FUNCTION);
+
+        function _nonBinaryFileFilter(file) {
+            return !LanguageManager.getLanguageForPath(file.fullPath).isBinary();
+        }
+
+        ProjectManager.getAllFiles(_nonBinaryFileFilter)
+            .done(function (files) {
+                JSUtils.findMatchingFunctions(functionName, files)
+                    .done(function (functions) {
+                        PerfUtils.addMeasurement(PerfUtils.JAVASCRIPT_FIND_FUNCTION);
+                        result.resolve(functions);
+                    })
+                    .fail(function () {
+                        PerfUtils.finalizeMeasurement(PerfUtils.JAVASCRIPT_FIND_FUNCTION);
+                        result.reject();
+                    });
+            })
+            .fail(function () {
+                result.reject();
+            });
+
+        return result.promise();
+    }
     
     EditorManager.registerInlineDocsProvider(inlineProvider); 
 });
