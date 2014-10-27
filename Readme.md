@@ -4,6 +4,8 @@ It supports JSDoc comments since v1.2 and some requirejs stuff (v1.4).
 
 Maybe you want to check out my [FuncDocr](https://github.com/Wikunia/brackets-FuncDocr) extension to generate JSDocs for your own functions.
 
+**You miss some docs for standard functions? Add them here [issue (#12)](../../issues/12). Thanks for your help!**
+
 The extension tries to get the correct documentation if the function is available for strings and arrays.
 
 ```javascript
