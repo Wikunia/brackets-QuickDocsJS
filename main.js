@@ -14,14 +14,14 @@ define(function(require, exports, module) {
 
     var ExtPath = ExtensionUtils.getModulePath(module);
     
-	var JS_CLASSES 		= ["Array","global","Math","RegExp","Statements","String"];
-	var NODE_CLASSES 	= ['child_process','cluster','console','crypto','dns','domain','fs','http',
-						   'https','net','os','path','process','punycode','querystring','readline','repl','timers',
-						   'tls','tty','dgram','url','util','vm','zlib'];
+	var JS_CLASSES 			= ["Array","global","Math","RegExp","Statements","String"];
+	var NODE_CLASSES 		= ['child_process','cluster','console','crypto','dns','domain','fs','http',
+							   'https','net','os','path','process','punycode','querystring','readline','repl','timers',
+						   		'tls','tty','dgram','url','util','vm','zlib'];
+	var NODE_WOUT_IMPORT 	= ['console'];
 
     // Extension modules
     var InlineDocsViewer = require("InlineDocsViewer");
-
     
     function inlineProvider(hostEditor, pos) {
 		var result = new $.Deferred();
@@ -59,15 +59,21 @@ define(function(require, exports, module) {
 					case ".":
 						// if variable type is unknown
 						if (func.variable_type == 'unknown') {
-							tags = getTags(func,"String");
-							func_class = "Global_Objects/String";
-							if (!tags) { // try array functions
-								tags = getTags(func,"Array");
-								func_class = "Global_Objects/Array";
-							}
-							if (!tags) { // try RegExp functions
-								tags = getTags(func,"RegExp");
-								func_class = "Global_Objects/RegExp";
+							if (NODE_WOUT_IMPORT.indexOf(func.variable) >= 0) {
+								tags = getTags(func,'nodejs/'+func.variable);
+								func_class = "NodeJS/"+func.variable;
+								url = createNodeUrl(func.variable,tags);
+							} else {
+								tags = getTags(func,"String");
+								func_class = "Global_Objects/String";
+								if (!tags) { // try array functions
+									tags = getTags(func,"Array");
+									func_class = "Global_Objects/Array";
+								}
+								if (!tags) { // try RegExp functions
+									tags = getTags(func,"RegExp");
+									func_class = "Global_Objects/RegExp";
+								}
 							}
 							// if the variable type file exists
 						} else if (JS_CLASSES.indexOf(func.variable_type) >= 0) {
@@ -98,7 +104,7 @@ define(function(require, exports, module) {
 					var tags = get_userdefined_tags(currentDoc,func);
 					func_class = 'user_defined';
 					url = false;
-				} else {
+				} else if (typeof(url) === "undefined") {
 					url = true;
 				}
 				if (tags) {
@@ -109,10 +115,20 @@ define(function(require, exports, module) {
 						});
 					}
 				} else {
-					result.reject();
+					// try to find the function in other files
+					tryJSUtils(func).done(function(data) {
+						tags = data;
+						var url = false;
+						var inlineViewer = sendToInlineViewer(hostEditor,tags,func,url);
+						inlineViewer.done(function(inlineWidget) {
+							result.resolve(inlineWidget);
+						});
+					}).fail(function(errorCode) {
+						result.reject();
+					});
 				}
-
 			} else {
+				// the current function is defined in a module
 				var modContent = getModuleContent(func.mod,currentModDir);
 				modContent.done(function(content) {
 					var tags = get_userdefined_tags(content,func);
@@ -134,9 +150,7 @@ define(function(require, exports, module) {
 							tags = getTags(func,'nodejs/'+func.variable_type);
 							func_class = "NodeJS/"+func.variable_type;
 							if (tags && tags.y) {
-								url = 'http://nodejs.org/docs/v0.10.32/api/'+func.variable_type+'.html';
-								url += '#'+func.variable_type+'_';
-								url += tags.y.replace(/[ ,-.\[\]()]+/g,'_').replace(/_+$/,'').toLowerCase();
+								url = createNodeUrl(func.variable_type,tags);
 								func.nodeJS = true;
 								var inlineViewer = sendToInlineViewer(hostEditor,tags,func,url);
 								inlineViewer.done(function(inlineWidget) {
@@ -145,10 +159,10 @@ define(function(require, exports, module) {
 							}
 						}
 					}
-					if (!tags)
+					if (!tags) {
 						tryJSUtils(func).done(function(data) {
 							tags = data;
-							var url = false;
+							url = false;
 							var inlineViewer = sendToInlineViewer(hostEditor,tags,func,url);
 							inlineViewer.done(function(inlineWidget) {
 								result.resolve(inlineWidget);
@@ -156,15 +170,23 @@ define(function(require, exports, module) {
 						}).fail(function(errorCode) {
 							result.reject();
 						});
+					}
 				});
 			}
 			if (result.state() == "rejected") {
 				return null;
 			}
 			return result.promise();
-
         } else {
         	return null;
+		}
+
+
+		function createNodeUrl(nodeClass,tags) {
+			var result = 'http://nodejs.org/docs/v0.10.32/api/'+nodeClass+'.html';
+			result += '#'+nodeClass+'_';
+			result += tags.y.replace(/[ ,-.\[\]()]+/g,'_').replace(/_+$/,'').toLowerCase();
+			return result;
 		}
 
 		function tryJSUtils(func) {
@@ -968,7 +990,7 @@ define(function(require, exports, module) {
 
                 } else {        // no result from Tern.  Fall back to _findInProject().
 
-                    findFunctionWithoutTern(functionName).done(function (functions) {
+                    _findFunctionWithoutTern(functionName).done(function (functions) {
                         if (functions && functions.length > 0) {
                            result.resolve(functions[0]);
                         } else {
