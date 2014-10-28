@@ -14,7 +14,7 @@ define(function(require, exports, module) {
 
     var ExtPath = ExtensionUtils.getModulePath(module);
     
-	var JS_CLASSES 			= ["Array","global","Math","RegExp","Statements","String"];
+	var JS_CLASSES 			= ["Array","global","Math","RegExp","Statements","String","window"];
 	var NODE_CLASSES 		= ['child_process','cluster','console','crypto','dns','domain','fs','http',
 							   'https','net','os','path','process','punycode','querystring','readline','repl','timers',
 						   		'tls','tty','dgram','url','util','vm','zlib'];
@@ -51,6 +51,7 @@ define(function(require, exports, module) {
 
         // if a function was selected
         if (func) {
+			console.log('func: ',func);
 			func.nodeJS = false;
             var func_class,url;
 			var tags = false;
@@ -81,13 +82,19 @@ define(function(require, exports, module) {
 							func_class = "Global_Objects/"+func.variable_type;
 						}
 						break;
+					window.addEventListener
 					case "Math.": // Math functions
 						tags = getTags(func,"Math");
 						func_class = "Global_Objects/Math";
 						break;
 					case "RegExp.": // RegExp functions
 						tags = getTags(func,"RegExp");
-						 func_class = "Global_Objects/RegExp";
+						func_class = "Global_Objects/RegExp";
+						break;
+					case "window.": // Window functions
+						tags = getTags(func,"window");
+						func_class = "API/Window";
+						url = 'https://developer.mozilla.org/en-US/docs/Web/API/Window.'+func.name;
 						break;
 					default:
 						tags = getTags(func,"Statements");
@@ -95,6 +102,11 @@ define(function(require, exports, module) {
 						if (!tags) {
 							tags = getTags(func,"global");
 							func_class = "Global_Objects";
+							if (!tags) {
+								tags = getTags(func,"window");
+								func_class = "API/Window";
+								url = 'https://developer.mozilla.org/en-US/docs/Web/API/Window.'+func.name;
+							}
 						}
 				}
 
@@ -113,6 +125,8 @@ define(function(require, exports, module) {
 						inlineViewer.done(function(inlineWidget) {
 							result.resolve(inlineWidget);
 						});
+					} else {
+						result.reject();
 					}
 				} else {
 					// try to find the function in other files
@@ -139,6 +153,8 @@ define(function(require, exports, module) {
 							inlineViewer.done(function(inlineWidget) {
 								result.resolve(inlineWidget);
 							});
+						} else {
+							result.reject();
 						}
 					} else {
 						result.reject();
@@ -356,14 +372,15 @@ define(function(require, exports, module) {
         if (no_function_chars.indexOf(line_begin_rev.substr(b,1)) === -1 || b == line_begin_rev.length) {
             var func = new Object();
             func.name = line.substr(func_start_pos,func_name_length);
-            
+
             // check if function is like abc.substr or only like eval (no point)
             if (line_begin_rev.substr(b,1) == ".") {
                 func.type = ".";   
-                if (line_begin_rev.substr(b,5) == ".htaM") { // Math. reverse
+				if (line_begin_rev.substr(b,7) == ".wodniw") {
+					func.type = "window.";
+				} else if (line_begin_rev.substr(b,5) == ".htaM") { // Math. reverse
                     func.type = "Math.";
-                }
-                if (line_begin_rev.substr(b,7).search(/\.'(g|m|i|y){0,4}\//) !== -1) { // regex with g,m,i,y flags reverse
+                } else if (line_begin_rev.substr(b,7).search(/\.'(g|m|i|y){0,4}\//) !== -1) { // regex with g,m,i,y flags reverse
                     func.type = "RegExp.";
                 }
                 // if it is no Math or RegExp function => try to get the type
