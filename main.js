@@ -10,7 +10,9 @@ define(function(require, exports, module) {
 	JSUtils                 = brackets.getModule("language/JSUtils"),
 	FileSystem          	= brackets.getModule("filesystem/FileSystem"),
 	FileUtils           	= brackets.getModule("file/FileUtils"),
-	ProjectManager          = brackets.getModule("project/ProjectManager");
+	PerfUtils           	= brackets.getModule("utils/PerfUtils"),
+	ProjectManager          = brackets.getModule("project/ProjectManager"),
+	LanguageManager         = brackets.getModule("language/LanguageManager");
 
     var ExtPath = ExtensionUtils.getModulePath(module);
     
@@ -51,38 +53,51 @@ define(function(require, exports, module) {
 
         // if a function was selected
         if (func) {
-			console.log('func: ',func);
 			func.nodeJS = false;
-            var func_class,url;
+            var func_class,url,JQueryDocName;
 			var tags = false;
             if (!("mod" in func)) {
 				switch(func.type) {
 					case ".":
-						// if variable type is unknown
-						if (func.variable_type == 'unknown') {
-							if (NODE_WOUT_IMPORT.indexOf(func.variable) >= 0) {
-								tags = getTags(func,'nodejs/'+func.variable);
-								func_class = "NodeJS/"+func.variable;
-								url = createNodeUrl(func.variable,tags);
-							} else {
-								tags = getTags(func,"String");
-								func_class = "Global_Objects/String";
-								if (!tags) { // try array functions
-									tags = getTags(func,"Array");
-									func_class = "Global_Objects/Array";
+						switch(func.variable_type) {
+							// if variable type is unknown
+							case "unknown":
+								// try jQuery
+								tags = tryJQuery(func); // no $.Deferred
+								if (tags) {
+									func_class = "jQuery/"+func.name;
+									url = createJQueryUrl(JQueryDocName);
+								} else if (NODE_WOUT_IMPORT.indexOf(func.variable) >= 0) {
+									tags = getTags(func,'nodejs/'+func.variable);
+									func_class = "NodeJS/"+func.variable;
+									url = createNodeUrl(func.variable,tags);
+								} else {
+									tags = getTags(func,"String");
+									func_class = "Global_Objects/String";
+									if (!tags) { // try array functions
+										tags = getTags(func,"Array");
+										func_class = "Global_Objects/Array";
+									}
+									if (!tags) { // try RegExp functions
+										tags = getTags(func,"RegExp");
+										func_class = "Global_Objects/RegExp";
+									}
 								}
-								if (!tags) { // try RegExp functions
-									tags = getTags(func,"RegExp");
-									func_class = "Global_Objects/RegExp";
+								break;
+							case "$.Deferred": // jQuery
+								tags = getTags(func,'jquery/deferred');
+								if (tags) {
+									func_class = "jQuery/"+func.name;
+									url = createJQueryUrl('deferred.'+func.name);
 								}
-							}
-							// if the variable type file exists
-						} else if (JS_CLASSES.indexOf(func.variable_type) >= 0) {
-							tags = getTags(func,func.variable_type);
-							func_class = "Global_Objects/"+func.variable_type;
+								break;
+							default:
+								if (JS_CLASSES.indexOf(func.variable_type) >= 0) {
+									tags = getTags(func,func.variable_type);
+									func_class = "Global_Objects/"+func.variable_type;
+								}
 						}
 						break;
-					window.addEventListener
 					case "Math.": // Math functions
 						tags = getTags(func,"Math");
 						func_class = "Global_Objects/Math";
@@ -147,15 +162,13 @@ define(function(require, exports, module) {
 				modContent.done(function(content) {
 					var tags = get_userdefined_tags(content,func);
 					if (tags) {
-						if (tags.s != "" || tags.p) {
-							url = false;
-							var inlineViewer = sendToInlineViewer(hostEditor,tags,func,url);
-							inlineViewer.done(function(inlineWidget) {
-								result.resolve(inlineWidget);
-							});
-						} else {
+						url = false;
+						var inlineViewer = sendToInlineViewer(hostEditor,tags,func,url);
+						inlineViewer.done(function(inlineWidget) {
+							result.resolve(inlineWidget);
+						}).fail(function() {
 							result.reject();
-						}
+						});
 					} else {
 						result.reject();
 					}
@@ -205,6 +218,11 @@ define(function(require, exports, module) {
 			return result;
 		}
 
+		function createJQueryUrl(JQueryDocName) {
+			var result = 'http://api.jquery.com/'+JQueryDocName;
+			return result;
+		}
+
 		function tryJSUtils(func) {
 			var result = $.Deferred();
 			findFunctionInProject(func.name).done(function(functionArray) {
@@ -221,8 +239,25 @@ define(function(require, exports, module) {
 			return result.promise();
 		}
 
+		function tryJQuery(func) {
+			var tags = false;
+			if (func.variable == "$") {
+				JQueryDocName = 'jQuery.'+func.name;
+				tags = getTags(func,'jquery/jQuery');
+			} else {
+				JQueryDocName = func.name;
+				tags = getTags(func,'jquery/element');
+				if (!tags) {
+					JQueryDocName = 'event.'+func.name;
+					tags = getTags(func,'jquery/event');
+				}
+			}
+			return tags;
+		}
+
 
 		function sendToInlineViewer(hostEditor,tags,func,url) {
+			var result = new $.Deferred();
 			if (tags.s != "" || tags.p) {
 				var summary = tags.s;
 				var syntax = tags.y.replace(/\n/g,'<br>');
@@ -252,7 +287,6 @@ define(function(require, exports, module) {
 					tags.r = {};
 				}
 
-				var result = new $.Deferred();
 				var inlineWidget = new InlineDocsViewer(
 									func.name,
 									{
@@ -261,14 +295,14 @@ define(function(require, exports, module) {
 								);
 				inlineWidget.load(hostEditor);
 				result.resolve(inlineWidget);
-				return result.promise();
-			}
+			} else result.reject();
+			return result.promise();
 		}
     }
     
     /**
      * Read the type.json file and return tags
-     * @param   {String} func function name
+     * @param   {Object} func function includes func.name
      * @param   {String} type function type where to finde the json file inside the dir "docs" i.e Array or nodejs/assert
      * @returns {Object} tags if the function exists, null otherwiese
      */
@@ -286,7 +320,7 @@ define(function(require, exports, module) {
             // function information is available
             var tags = JSON.parse(xhr.responseText);
             tags = eval('tags.'+func.name);
-            
+
             // if the function exists
             if (tags) {
                 return tags;
@@ -478,16 +512,16 @@ define(function(require, exports, module) {
     function getVariableType (content, variable,pos, currentModDir) {
         // get the declaration for this variable 
         // can be a ',' between two declarations
-        var regex = new RegExp('var [^;]*?' + variable + '\\s*?=','');
+        var regex = new RegExp('var (?:\\s*?|[^;]*?,\\s*?)' + variable + '\\s*?=','');
         var match = regex.exec(content);
-     
+
         if (match) {
             var pos = match.index;
             // length of the match
             var match_len = match[0].length;
         } else {
             // if the declaration is not available in this content
-			regex = new RegExp(variable + '\\s*?=','');
+			regex = new RegExp('\[\\s,\]' + variable + '\\s*?=','');
         	match = regex.exec(content);
 			if (match) {
 				var pos = match.index;
@@ -560,7 +594,7 @@ define(function(require, exports, module) {
         value = value.trim();
 
 		// check for 'new' declaration
-		var newRegex = /^new\s+?([a-z]*)/i;
+		var newRegex = /^new\s+?((\$\.?)?[a-z]*)/i;
 		var objectName = newRegex.exec(value);
 		if (objectName) {
 			var before = content.split("\n",pos.line);
@@ -577,19 +611,24 @@ define(function(require, exports, module) {
 		var requireName = requireRegex.exec(value);
 		if (requireName) {
 			var before = content.split("\n",pos.line);
-			var result = getModuleForVariable(content,before,variable);
+			var result = getModuleForVariable(content,before,requireName[1]);
 			if (result.mod) {
 				return result;
 			} else {
-				return {type:objectName[1]};
+				return {type:requireName[1]};
 			}
 		}
-
 
         // split the declaration into parts
         var value_parts = value.split(".");
         // if the declaration is like variablename.function[.function,...]
         if (value_parts.length >= 2) {
+			if (value_parts[0] == '$') {
+				if (value_parts[1].indexOf('Deferred(') == 0) {
+					return {type:'$.Deferred'};
+				}
+			}
+
             // iterate through the parts starting with the functions
             for (var i = 1; i < value_parts.length; i++) {
                 // get positon of the parameter part for this function
@@ -708,9 +747,8 @@ define(function(require, exports, module) {
 			}
 		} else { // maybe it's only a require
 			// check for // variable	   = require('...');
-			var REGEX_REQUIRE = new RegExp(variable+'\\s*=\\s*require\\(\'(.*?)\'\\)');
+			var REGEX_REQUIRE = new RegExp('\[\\s,\]' + variable + '\\s*=\\s*require\\(\'(.*?)\'\\)');
 			var match = REGEX_REQUIRE.exec(before);
-
 			if (match) {
 				return {type: match[1], mod: match[1]};
 			}
@@ -974,20 +1012,21 @@ define(function(require, exports, module) {
 	}
 
 	function findFunctionInProject(functionName) {
-        // Use Tern jump-to-definition helper, if it's available, to find InlineEditor target.
+        var result = new $.Deferred();
+
+		// Use Tern jump-to-definition helper, if it's available, to find InlineEditor target.
         var helper = brackets._jsCodeHintsHelper;
         if (helper === null) {
-            return null;
+            result.reject();
         }
 
-        var result = new $.Deferred();
+
 
         var response = helper();
         if (response.hasOwnProperty("promise")) {
             response.promise.done(function (jumpResp) {
                 var resolvedPath = jumpResp.fullPath;
                 if (resolvedPath) {
-
                     // Tern doesn't always return entire function extent.
                     // Use QuickEdit search now that we know which file to look at.
                     var fileInfos = [];
@@ -1006,7 +1045,6 @@ define(function(require, exports, module) {
                         });
 
                 } else {        // no result from Tern.  Fall back to _findInProject().
-
                     _findFunctionWithoutTern(functionName).done(function (functions) {
                         if (functions && functions.length > 0) {
                            result.resolve(functions[0]);
@@ -1022,8 +1060,7 @@ define(function(require, exports, module) {
             }).fail(function () {
                 result.reject();
             });
-
-        }
+		}
 
         return result.promise();
     }
@@ -1036,7 +1073,7 @@ define(function(require, exports, module) {
     function  _findFunctionWithoutTern(functionName) {
         var result = new $.Deferred();
 
-        PerfUtils.markStart(PerfUtils.JAVASCRIPT_FIND_FUNCTION);
+        var timerName = PerfUtils.markStart(PerfUtils.JAVASCRIPT_FIND_FUNCTION);
 
         function _nonBinaryFileFilter(file) {
             return !LanguageManager.getLanguageForPath(file.fullPath).isBinary();
@@ -1046,11 +1083,11 @@ define(function(require, exports, module) {
             .done(function (files) {
                 JSUtils.findMatchingFunctions(functionName, files)
                     .done(function (functions) {
-                        PerfUtils.addMeasurement(PerfUtils.JAVASCRIPT_FIND_FUNCTION);
+                        PerfUtils.addMeasurement(timerName);
                         result.resolve(functions);
                     })
                     .fail(function () {
-                        PerfUtils.finalizeMeasurement(PerfUtils.JAVASCRIPT_FIND_FUNCTION);
+                        PerfUtils.finalizeMeasurement(timerName);
                         result.reject();
                     });
             })

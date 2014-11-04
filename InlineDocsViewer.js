@@ -59,20 +59,23 @@ define(function (require, exports, module) {
         
         // valueInfo.t = title (.d = description)
         var propValues = jsPropDetails.VALUES.map(function (valueInfo) {
+			valueInfo.cssOptionalDefault = 'display:none;';
 			if (valueInfo.optional) {
-				if (typeof valueInfo.default !== "undefined") {
+				if (valueInfo.default !== null && typeof valueInfo.default !== "undefined") {
 					valueInfo.default = 'Default: '+valueInfo.default;
+					valueInfo.cssOptionalDefault = 'display:inline;';
 				}
 				valueInfo.cssOptional = 'display:inline;';
 			} else {
 				valueInfo.cssOptional = 'display:none;';
 			}
             return {
-				name: 			valueInfo.t,
-				description: 	valueInfo.d,
-				type: 			valueInfo.type,
-				default: 		valueInfo.default,
-				cssOptional: 	valueInfo.cssOptional
+				name: 					valueInfo.t,
+				description: 			valueInfo.d,
+				type: 					valueInfo.type,
+				default: 				valueInfo.default,
+				cssOptional: 			valueInfo.cssOptional,
+				cssOptionalDefault: 	valueInfo.cssOptionalDefault
 			};
         });
 		var returnValues = [{description: jsPropDetails.RETURN.d, type: jsPropDetails.RETURN.type}];
@@ -97,6 +100,11 @@ define(function (require, exports, module) {
 			infoUrlName 	= "NodeJS.org";
 			licenseUrl		= "https://raw.githubusercontent.com/joyent/node/v0.10.32/LICENSE";
 			licenseUrlName	= "NodeJS License";
+		} else if (jsPropDetails.URL && jsPropDetails.URL.substr(0, "http://api.jquery.com".length) === "http://api.jquery.com") {
+			infoUrl 		= "https://api.jquery.com/";
+			infoUrlName 	= "jquery.com"
+			licenseUrl		= "http://en.wikipedia.org/wiki/MIT_License";
+			licenseUrlName	= "MIT License";
 		} else {
 			infoUrl 		= "https://developer.mozilla.org/";
 			infoUrlName 	= "mozilla.org"
