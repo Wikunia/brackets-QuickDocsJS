@@ -277,14 +277,17 @@ define(function (require, exports, module) {
 	function parseJSDocs(doc) {
 		if (typeof doc == "string") {
 			doc = doc.replace(/<br \/>|<br>/,'\r\n');
-			doc = doc.replace(/{@link\s([^|]*?)\|\s*(https?:\/\/.*?)}/m,function(match,p1,p2) {
-				return '<a href="'+p2.trim()+'">'+p1.trim()+'</a>';
+			doc = doc.replace(/{@link\s+(https?:\/\/[^|}]*?)\|\s*(.*?)}/m,function(match,p1,p2) {
+				return '<a href="'+p1.trim()+'">'+p2.trim()+'</a>';
 			});
-			doc = doc.replace(/(?:\[(.*?)\])?{@link\s+(https?:\/\/.*?)}/m,function(match,p1,p2) {
+			doc = doc.replace(/(?:\[(.*?)\])?{@link\s+(https?:\/\/[^| ]*?)(?:\s+(.*?))?}/m,function(match,p1,p2,p3) {
 				if (p1)
 					return '<a href="'+p2.trim()+'">'+p1.trim()+'</a>';
+				if (p3)
+					return '<a href="'+p2.trim()+'">'+p3.trim()+'</a>';
 				return '<a href="'+p2.trim()+'">'+p2.trim()+'</a>';
 			});
+			doc = doc.replace(/\r\n/,'<br />');
 		}
 		return doc;
 	}
