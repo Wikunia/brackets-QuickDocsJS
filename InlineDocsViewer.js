@@ -277,8 +277,8 @@ define(function (require, exports, module) {
 	function parseJSDocs(doc) {
 		if (typeof doc == "string") {
 			doc = doc.replace(/<br \/>|<br>/,'\r\n');
-			doc = doc.replace(/{@link\s([^|]*?)\|\s*(https?:\/\/.*?)}/m,function(match,p1,p2) {
-				return '<a href="'+p2.trim()+'">'+p1.trim()+'</a>';
+			doc = doc.replace(/{@link\s(https?:\/\/[^|\s]*)(?:\||(?:\s)+)(.*)}/m,function(match,p1,p2) {
+				return '<a href="'+p1.trim()+'">'+p2.trim()+'</a>';
 			});
 			doc = doc.replace(/(?:\[(.*?)\])?{@link\s+(https?:\/\/.*?)}/m,function(match,p1,p2) {
 				if (p1)
