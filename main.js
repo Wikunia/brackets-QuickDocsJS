@@ -812,7 +812,7 @@ define(function(require, exports, module) {
                     lines[i] = lines[i].replace(/^\*/,'').trim(); // delete * at the beginning and trim line again
 				}
 				comment = lines.join('\n');
-				var commentTags = comment.split('@');
+				var commentTags = comment.split(/[\n]\s*@/);
 
 
 
