@@ -1006,7 +1006,7 @@ define(function(require, exports, module) {
     function reverse_str(s){
         return s.split("").reverse().join("");
     }
-    
+
 	String.prototype.addSlashes = function() {
 	  return this
 		.replace(/([^\\])\//g, '$1\\\/');

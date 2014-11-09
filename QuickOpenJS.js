@@ -40,6 +40,12 @@ define(function (require, exports, module) {
 		Commands			= brackets.getModule("command/Commands");
 
 
+   /**
+    * Find function in a project and return the first found function with a specific name
+    * Using {@link _findFunctionWithoutTern} if tern doesn't work
+    * @param   {String}   functionName name of the function
+    * @returns {Deferred} Object which includes the path and the lines of the function
+    */
    function findFunctionInProject(functionName) {
         var result = new $.Deferred();
 
@@ -104,6 +110,7 @@ define(function (require, exports, module) {
 
 
 	/*
+	 * Find a function without using tern
      * @param {!string} functionName
      * @return {$.Promise} a promise that will be resolved with an array of function offset information
      */
