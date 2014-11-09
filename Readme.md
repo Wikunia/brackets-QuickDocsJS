@@ -1,10 +1,15 @@
 # QuickDocsJS
 This extension provides a quick documentation for each JavaScript function.
-It supports JSDoc comments since v1.2 and some requirejs stuff (v1.4).
+It supports JSDoc comments since v1.2 and some requirejs stuff (v1.4) which allows you to access documentations which aren't in the same file!
+You don't use normal JS but jQuery or NodeJS? QuickDocs supports both of them (v1.5 & v1.6). 
 
-Maybe you want to check out my [FuncDocr](https://github.com/Wikunia/brackets-FuncDocr) extension to generate JSDocs for your own functions.
+**Miss some docs for standard functions or JS extensions like jQuery? Add them here [issue (#12)](../../issues/12). Thanks for your help!**
 
-**You miss some docs for standard functions? Add them here [issue (#12)](../../issues/12). Thanks for your help!**
+QuickDocsJS makes it easy to read your JSDoc comments inline, but you have to write these comments...
+
+...Maybe you want to check out my [FuncDocr](https://github.com/Wikunia/brackets-FuncDocr) extension to generate JSDocs for your own functions.
+
+## Type Recognition Magic
 
 The extension tries to get the correct documentation if the function is available for strings and arrays.
 
