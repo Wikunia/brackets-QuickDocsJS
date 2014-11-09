@@ -27,6 +27,8 @@ You can use the Navigation menu or ```Ctrl+K``` (Windows) or ```CMD+K``` (Mac), 
 
 This extension uses the documentation from [http://developer.mozilla.org](http://developer.mozilla.org) for JS functions and [http://nodejs.org](http://nodejs.org) for NodeJS functions.
 
+Since v1.6.0 QuickDocs supports jQuery! Thanks [http://api.jquery.com](http://api.jquery.com)
+
 ## v 1.6.0
 Support for jQuery!
 ![jQuery](image/jQuery.png?raw=true)
