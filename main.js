@@ -12,7 +12,8 @@ define(function(require, exports, module) {
 	FileUtils           	= brackets.getModule("file/FileUtils"),
 	PerfUtils           	= brackets.getModule("utils/PerfUtils"),
 	ProjectManager          = brackets.getModule("project/ProjectManager"),
-	LanguageManager         = brackets.getModule("language/LanguageManager");
+	LanguageManager         = brackets.getModule("language/LanguageManager"),
+	QuickOpenJS				= require('QuickOpenJS');
 
     var ExtPath = ExtensionUtils.getModulePath(module);
     
@@ -225,7 +226,7 @@ define(function(require, exports, module) {
 
 		function tryJSUtils(func) {
 			var result = $.Deferred();
-			findFunctionInProject(func.name).done(function(functionArray) {
+			QuickOpenJS.findFunctionInProject(func.name).done(function(functionArray) {
 				var content = getContentSync(functionArray.document.file._path);
 				var tags = get_userdefined_tags(content,func);
 				if (tags) {
@@ -874,7 +875,7 @@ define(function(require, exports, module) {
 
                         params.push({
 							't':param_title,
-							'd':description.replace(/\r?\n/g,'<br />'),
+							'd':(typeof description === "undefined") ? '' : description.replace(/\r?\n/g,'<br />'),
 							'type':param_type,
 							'optional':optional,'default':defaultValue
 						});
@@ -906,7 +907,7 @@ define(function(require, exports, module) {
 	 * Get the content of a special modul
 	 * For that iterate through all js files
 	 * @param   {String} moduleName name of the js module
-	 * @param   {String} moduleDir  module directory
+	 * @param   {String} moduleDir  module directory {@link findFunctionInProject}
 	 * @returns {String} The content of the js module file
 	 */
 	function getModuleContent(moduleName,moduleDir) {
@@ -1011,92 +1012,7 @@ define(function(require, exports, module) {
 		.replace(/([^\\])\//g, '$1\\\/');
 	}
 
-	function findFunctionInProject(functionName) {
-        var result = new $.Deferred();
 
-		// Use Tern jump-to-definition helper, if it's available, to find InlineEditor target.
-        var helper = brackets._jsCodeHintsHelper;
-        if (helper === null) {
-            result.reject();
-        }
-
-
-
-        var response = helper();
-        if (response.hasOwnProperty("promise")) {
-            response.promise.done(function (jumpResp) {
-                var resolvedPath = jumpResp.fullPath;
-                if (resolvedPath) {
-                    // Tern doesn't always return entire function extent.
-                    // Use QuickEdit search now that we know which file to look at.
-                    var fileInfos = [];
-                    fileInfos.push({name: jumpResp.resultFile, fullPath: resolvedPath});
-                    JSUtils.findMatchingFunctions(functionName, fileInfos, true)
-                        .done(function (functions) {
-                            if (functions && functions.length > 0) {
-                               result.resolve(functions[0]);
-                            } else {
-                                console.log('no function found');
-                                result.reject();
-                            }
-                        })
-                        .fail(function () {
-                            result.reject();
-                        });
-
-                } else {        // no result from Tern.  Fall back to _findInProject().
-                    _findFunctionWithoutTern(functionName).done(function (functions) {
-                        if (functions && functions.length > 0) {
-                           result.resolve(functions[0]);
-                        } else {
-                           	console.log('no function found');
-                            result.reject();
-                        }
-                    }).fail(function () {
-                        result.reject();
-                    });
-                }
-
-            }).fail(function () {
-                result.reject();
-            });
-		}
-
-        return result.promise();
-    }
-
-
-	/*
-     * @param {!string} functionName
-     * @return {$.Promise} a promise that will be resolved with an array of function offset information
-     */
-    function  _findFunctionWithoutTern(functionName) {
-        var result = new $.Deferred();
-
-        var timerName = PerfUtils.markStart(PerfUtils.JAVASCRIPT_FIND_FUNCTION);
-
-        function _nonBinaryFileFilter(file) {
-            return !LanguageManager.getLanguageForPath(file.fullPath).isBinary();
-        }
-
-        ProjectManager.getAllFiles(_nonBinaryFileFilter)
-            .done(function (files) {
-                JSUtils.findMatchingFunctions(functionName, files)
-                    .done(function (functions) {
-                        PerfUtils.addMeasurement(timerName);
-                        result.resolve(functions);
-                    })
-                    .fail(function () {
-                        PerfUtils.finalizeMeasurement(timerName);
-                        result.reject();
-                    });
-            })
-            .fail(function () {
-                result.reject();
-            });
-
-        return result.promise();
-    }
     
     EditorManager.registerInlineDocsProvider(inlineProvider); 
 });

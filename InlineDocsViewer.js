@@ -36,7 +36,9 @@ define(function (require, exports, module) {
         InlineWidget        = brackets.getModule("editor/InlineWidget").InlineWidget,
         KeyEvent            = brackets.getModule("utils/KeyEvent"),
         NativeApp           = brackets.getModule("utils/NativeApp"),
-        Strings             = brackets.getModule("strings");
+        Strings             = brackets.getModule("strings"),
+		QuickOpenJS			= require('QuickOpenJS');
+
     
 	var infoUrl,infoUrlName,licenseUrl,licenseUrlName;
 
@@ -139,7 +141,7 @@ define(function (require, exports, module) {
         this.$wrapperDiv.find("a").each(function (index, elem) {
             var $elem = $(elem);
             var url = $elem.attr("href");
-            if (url && url.substr(0, 4) !== "http") {
+            if (url && url.substr(0, 4) !== "http" && !$elem.hasClass('jumpToDef')) {
                 // URLs in JSON data are relative
                 url = "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/" + url;
                 $elem.attr("href", url);
@@ -156,6 +158,13 @@ define(function (require, exports, module) {
         this.$scroller = this.$wrapperDiv.find(".scroller");
         this.$scroller.on("mousewheel", this._handleWheelScroll);
         this._onKeydown = this._onKeydown.bind(this);
+
+		this.$jumpToDef = this.$wrapperDiv.find(".jumpToDef");
+		this.$jumpToDef.on('click', function(event) {
+			event.preventDefault();
+			var linkFunc = $(this).attr("href").substr(1);
+			QuickOpenJS.itemFocus(linkFunc);
+		});
     }
     
     InlineDocsViewer.prototype = Object.create(InlineWidget.prototype);
@@ -274,23 +283,46 @@ define(function (require, exports, module) {
         this.hostEditor.setInlineWidgetHeight(this, this.$wrapperDiv.height() + 20, true);
     };
     
+
+	/**
+	 * {@link get_userdefined_tags}
+	 * @param   {String} doc [[Description]]
+	 * @returns {String} [[Description]]
+	 */
 	function parseJSDocs(doc) {
 		if (typeof doc == "string") {
 			doc = doc.replace(/<br \/>|<br>/,'\r\n');
-			doc = doc.replace(/{@link\s+(https?:\/\/[^|}]*?)\|\s*(.*?)}/m,function(match,p1,p2) {
-				return '<a href="'+p1.trim()+'">'+p2.trim()+'</a>';
+			doc = doc.replace(/{@link\s+([^|}]*?)\|\s*(.*?)}/m,function(match,p1,p2) {
+				if (/^https?:\/\//.test(p1.trim())) {
+					return '<a href="'+p1.trim()+'">'+p2.trim()+'</a>';
+				}
+				return '<a class="jumpToDef" href="#'+p1.trim()+'">'+p2.trim()+'</a>';
 			});
-			doc = doc.replace(/(?:\[(.*?)\])?{@link\s+(https?:\/\/[^| ]*?)(?:\s+(.*?))?}/m,function(match,p1,p2,p3) {
-				if (p1)
-					return '<a href="'+p2.trim()+'">'+p1.trim()+'</a>';
-				if (p3)
-					return '<a href="'+p2.trim()+'">'+p3.trim()+'</a>';
-				return '<a href="'+p2.trim()+'">'+p2.trim()+'</a>';
+			doc = doc.replace(/(?:\[(.*?)\])?{@link\s+([^| ]*?)(?:\s+(.*?))?}/m,function(match,p1,p2,p3) {
+				if (p1) {
+					if (/^https?:\/\//.test(p1.trim())) {
+						return '<a href="'+p2.trim()+'">'+p1.trim()+'</a>';
+					}
+					return '<a class="jumpToDef" href="#'+p2.trim()+'">'+p1.trim()+'</a>';
+				}
+				if (p3) {
+					if (/^https?:\/\//.test(p2.trim())) {
+						return '<a href="'+p2.trim()+'">'+p3.trim()+'</a>';
+					}
+					return '<a class="jumpToDef" href="#'+p2.trim()+'">'+p3.trim()+'</a>';
+				}
+				if (/^https?:\/\//.test(p2.trim())) {
+					return '<a href="'+p2.trim()+'">'+p2.trim()+'</a>';
+				}
+				return '<a class="jumpToDef" href="#'+p2.trim()+'">'+p2.trim()+'</a>';
+
 			});
 			doc = doc.replace(/\r\n/,'<br />');
 		}
 		return doc;
 	}
+
+
     
     module.exports = InlineDocsViewer;
 });

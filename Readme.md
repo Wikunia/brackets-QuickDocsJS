@@ -22,6 +22,11 @@ You can use the Navigation menu or ```Ctrl+K``` (Windows) or ```CMD+K``` (Mac), 
 
 This extension uses the documentation from [http://developer.mozilla.org](http://developer.mozilla.org) for JS functions and [http://nodejs.org](http://nodejs.org) for NodeJS functions.
 
+## v 1.6.0
+Support for jQuery!
+![jQuery](image/jQuery.png?raw=true)
+`@link`-tags are parsed as HTML links now and you can use them to jump easy between functions!
+
 ## v 1.5.0
 Support for NodeJS!
 ![NodeJS](image/nodeJS.png?raw=true)
