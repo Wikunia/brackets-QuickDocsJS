@@ -766,28 +766,29 @@ define(function(require, exports, module) {
     function get_userdefined_tags(content,func) {
         var tags = new Object();
 		
-		var regexComment	 = /\/\*\*(?:[ \t]*)[\n\r](?:[\s\S]*?)\*\//;
-		var tabsLinesBetween = /(?:[ \t<]*)[\n\r]*?(?:[ \t]*)/;
+		// global is important for while!
+		var regexComment	 = /\/\*\*(?:[ \t]*)[\n\r](?:[\s\S]*?)\*\/([^{]*?)\{/g;
+	
+		var tabsLinesBetween = /^(?:[ \t<]*)[\n\r]*?(?:[ \t]*)/;
 		var functionDefs 	 = /(var (.*)=\s*(?:function(.*)|React.createClass\s*\((?:.*))|function (.*?)|(.*?):\s*?function(.*?)|([^.]*?)\.(prototype\.)?([^.]*?)\s*?=\s*?function(.*?))/;
 		var end				 = /(\n|\r|$)/;
 		
-		// global,multiline,caseinsensitive
-		var regex = new RegExp(regexComment.source + tabsLinesBetween.source + functionDefs.source + end.source , 'gmi');
-
-		// var regex = /\/\*\*(?:[ \t]*)[\n\r](?:[\s\S]*?)\*\/(?:[ \t<]*)[\n\r]*?(?:[ \t]*)(var (.*)=[ \(]*?function(.*)|function (.*?)|(.*?):\s*?function(.*?)|([^.]*?)\.(prototype\.)?([^.]*?)\s*?=\s*?function(.*?))(\n|\r|$)/gmi;
-      
-		var matches = null;
-        while (matches = regex.exec(content)) {
-            // matches[0] = all
-            // matches[2] = '''function_name''' or matches[4] if matches[2] undefined or matches[5] if both undefined
-            // get the function name
+		// multiline,caseinsensitive
+		var regex = new RegExp(tabsLinesBetween.source + functionDefs.source + end.source , 'mi');
+	
+		var matches 		= null;
+		var multicomment 	= null;
+        while (multicomment = regexComment.exec(content)) {
+			matches = regex.exec(multicomment[1]);
+			// matches[0] = all
+			// matches[2] = '''function_name''' or matches[4] if matches[2] undefined or matches[5] if both undefined
+			// get the function name
 			// start_pos
 			for (var i = 0; i < matches.length; i++) {
 				if (matches[i]) {
 					matches[i] = matches[i].trim();
 				}
 			}
-			
 			if (matches[2]) {
 				var match_func = matches[2].trim();
 			} else if (matches[4]) {
@@ -810,15 +811,15 @@ define(function(require, exports, module) {
 			if (end_func_name >= 0) {
 				match_func = match_func.substring(0,end_func_name).trim();
 			}
-            if (match_func === func.name) {
-                var lines  = matches[0].split(/[\n\r]/);
+			if (match_func === func.name) {
+				var lines  = multicomment[0].split(/[\n\r]/);
 				// get the comment without * at the beginning of a line
 				var comment = '';
 				lines = lines.slice(1);  // without the / * * at the end /beginning
 				for (var i = 0; i < lines.length; i++) {
-                    lines[i] = lines[i].trim(); // trim each line
+					lines[i] = lines[i].trim(); // trim each line
 					if (lines[i].substr(0,2) == "*/") { lines = lines.slice(0,i); break; }
-                    lines[i] = lines[i].replace(/^\*/,'').trim(); // delete * at the beginning and trim line again
+					lines[i] = lines[i].replace(/^\*/,'').trim(); // delete * at the beginning and trim line again
 				}
 				comment = lines.join('\n');
 				var commentTags = comment.split(/[\n]\s*@/);
@@ -830,17 +831,17 @@ define(function(require, exports, module) {
 
 				var params = [];
 				for (var i = 1; i < commentTags.length; i++) {
-                    // get params
-                    if (commentTags[i].substr(0,5) === 'param') {
-                        var param_parts = commentTags[i].split(/(\s)+/);
+					// get params
+					if (commentTags[i].substr(0,5) === 'param') {
+						var param_parts = commentTags[i].split(/(\s)+/);
 
-                        var param_type = '';
+						var param_type = '';
 						var delimiters = param_parts.filter(function(v,i) { return ((i % 2) === 1); });
 						param_parts = param_parts.filter(function(v,i) { return ((i % 2 === 0)); });
 
 
-                        // 0 = param, 1 = title, 2-... = description
-                        // 1,2 can be the type (inside {})
+						// 0 = param, 1 = title, 2-... = description
+						// 1,2 can be the type (inside {})
 						if (param_parts[2]) {
 							if (param_parts[1].substr(0,1) == '{' && param_parts[1].substr(-1) == '}') {
 								// type is part of the title
@@ -881,18 +882,18 @@ define(function(require, exports, module) {
 							}
 						}
 
-                        params.push({
+						params.push({
 							't':param_title,
 							'd':(typeof description === "undefined") ? '' : description.replace(/\r?\n/g,'<br />'),
 							'type':param_type,
 							'optional':optional,'default':defaultValue
 						});
-                    }
-                    if (commentTags[i].substr(0,6) === 'return') {
+					}
+					if (commentTags[i].substr(0,6) === 'return') {
 						if (commentTags[i].substr(0,7) === 'returns') {
 							var  return_tag = commentTags[i].substr(7).trim(); // delete returns and trim
 						} else {
-                        	var  return_tag = commentTags[i].substr(6).trim(); // delete return and trim
+							var  return_tag = commentTags[i].substr(6).trim(); // delete return and trim
 						}
 						if(return_tag.charAt(0) == '{') {
 							var endCurly = return_tag.indexOf('}');
@@ -900,13 +901,12 @@ define(function(require, exports, module) {
 						}else {
 							tags.r = return_tag;
 						}
-                    }
-                }
-                tags.p = params;
-                return tags;
-            }
-
-         }
+					}
+				}
+				tags.p = params;
+				return tags;
+			 }
+		}
         return null;   
     }
    
