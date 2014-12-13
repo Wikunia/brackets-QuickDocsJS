@@ -765,8 +765,16 @@ define(function(require, exports, module) {
     */
     function get_userdefined_tags(content,func) {
         var tags = new Object();
+		
+		var regexComment	 = /\/\*\*(?:[ \t]*)[\n\r](?:[\s\S]*?)\*\//;
+		var tabsLinesBetween = /(?:[ \t<]*)[\n\r]*?(?:[ \t]*)/;
+		var functionDefs 	 = /(var (.*)=\s*(?:function(.*)|React.createClass\s*\((?:.*))|function (.*?)|(.*?):\s*?function(.*?)|([^.]*?)\.(prototype\.)?([^.]*?)\s*?=\s*?function(.*?))/;
+		var end				 = /(\n|\r|$)/;
+		
 		// global,multiline,caseinsensitive
-        var regex = /\/\*\*(?:[ \t]*)[\n\r](?:[\s\S]*?)\*\/(?:[ \t<]*)[\n\r]*?(?:[ \t]*)(var (.*)=[ \(]*?function(.*)|function (.*?)|(.*?):\s*?function(.*?)|([^.]*?)\.(prototype\.)?([^.]*?)\s*?=\s*?function(.*?))(\n|\r|$)/gmi;
+		var regex = new RegExp(regexComment.source + tabsLinesBetween.source + functionDefs.source + end.source , 'gmi');
+
+		// var regex = /\/\*\*(?:[ \t]*)[\n\r](?:[\s\S]*?)\*\/(?:[ \t<]*)[\n\r]*?(?:[ \t]*)(var (.*)=[ \(]*?function(.*)|function (.*?)|(.*?):\s*?function(.*?)|([^.]*?)\.(prototype\.)?([^.]*?)\s*?=\s*?function(.*?))(\n|\r|$)/gmi;
       
 		var matches = null;
         while (matches = regex.exec(content)) {
@@ -779,7 +787,7 @@ define(function(require, exports, module) {
 					matches[i] = matches[i].trim();
 				}
 			}
-
+			
 			if (matches[2]) {
 				var match_func = matches[2].trim();
 			} else if (matches[4]) {
