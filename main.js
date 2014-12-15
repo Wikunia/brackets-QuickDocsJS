@@ -51,81 +51,22 @@ define(function(require, exports, module) {
         
         // get func.name and func.type ('.' or 'Math.')
         var func = get_func_name(currentDoc,sel.start,currentModDir);
-
+		console.log('func: ',func);
+		
+		
         // if a function was selected
         if (func) {
 			func.nodeJS = false;
             var func_class,url,JQueryDocName;
 			var tags = false;
             if (!("mod" in func)) {
-				switch(func.type) {
-					case ".":
-						switch(func.variable_type) {
-							// if variable type is unknown
-							case "unknown":
-								// try jQuery
-								tags = tryJQuery(func); // no $.Deferred
-								if (tags) {
-									func_class = "jQuery/"+func.name;
-									url = createJQueryUrl(JQueryDocName);
-								} else if (NODE_WOUT_IMPORT.indexOf(func.variable) >= 0) {
-									tags = getTags(func,'nodejs/'+func.variable);
-									func_class = "NodeJS/"+func.variable;
-									url = createNodeUrl(func.variable,tags);
-								} else {
-									tags = getTags(func,"String");
-									func_class = "Global_Objects/String";
-									if (!tags) { // try array functions
-										tags = getTags(func,"Array");
-										func_class = "Global_Objects/Array";
-									}
-									if (!tags) { // try RegExp functions
-										tags = getTags(func,"RegExp");
-										func_class = "Global_Objects/RegExp";
-									}
-								}
-								break;
-							case "$.Deferred": // jQuery
-								tags = getTags(func,'jquery/deferred');
-								if (tags) {
-									func_class = "jQuery/"+func.name;
-									url = createJQueryUrl('deferred.'+func.name);
-								}
-								break;
-							default:
-								if (JS_CLASSES.indexOf(func.variable_type) >= 0) {
-									tags = getTags(func,func.variable_type);
-									func_class = "Global_Objects/"+func.variable_type;
-								}
-						}
-						break;
-					case "Math.": // Math functions
-						tags = getTags(func,"Math");
-						func_class = "Global_Objects/Math";
-						break;
-					case "RegExp.": // RegExp functions
-						tags = getTags(func,"RegExp");
-						func_class = "Global_Objects/RegExp";
-						break;
-					case "window.": // Window functions
-						tags = getTags(func,"window");
-						func_class = "API/Window";
-						url = 'https://developer.mozilla.org/en-US/docs/Web/API/Window.'+func.name;
-						break;
-					default:
-						tags = getTags(func,"Statements");
-						func_class = "Statements";
-						if (!tags) {
-							tags = getTags(func,"global");
-							func_class = "Global_Objects";
-							if (!tags) {
-								tags = getTags(func,"window");
-								func_class = "API/Window";
-								url = 'https://developer.mozilla.org/en-US/docs/Web/API/Window.'+func.name;
-							}
-						}
+				var jsTags = getJSTagsNoMod(func);
+				if (jsTags) {
+					tags 		= jsTags.tags;
+					func_class 	= jsTags.func_class;
+					url 		= jsTags.url;
 				}
-
+				
 				// if tags for JS functions aren't available
 				if (!tags) {
 					// => check current document for user defined function
@@ -255,8 +196,7 @@ define(function(require, exports, module) {
 			}
 			return tags;
 		}
-
-
+	
 		function sendToInlineViewer(hostEditor,tags,func,url) {
 			var result = new $.Deferred();
 			if (tags.s != "" || tags.p) {
@@ -298,6 +238,91 @@ define(function(require, exports, module) {
 				result.resolve(inlineWidget);
 			} else result.reject();
 			return result.promise();
+		}
+			
+		
+		/**
+		 * Get JS Tags for jQuery,NodeJS,ReactJS or basic JS functions without module functions 
+		 * @param   {Object}         func the func object with .variable_type and .name
+		 * @returns {Boolean|Object} false if there are no tags otherwise {tags: tags, func_class: func_class, url: url}
+		 */
+		function getJSTagsNoMod(func) {
+			var url;
+			var func_class;
+			switch(func.type) {
+				case ".":
+					switch(func.variable_type) {
+						// if variable type is unknown
+						case "unknown":
+							// try jQuery
+							tags = tryJQuery(func); // no $.Deferred
+							if (tags) {
+								func_class = "jQuery/"+func.name;
+								url = createJQueryUrl(JQueryDocName);
+							} else if (NODE_WOUT_IMPORT.indexOf(func.variable) >= 0) {
+								tags = getTags(func,'nodejs/'+func.variable);
+								func_class = "NodeJS/"+func.variable;
+								url = createNodeUrl(func.variable,tags);
+							} else {
+								tags = getTags(func,"String");
+								func_class = "Global_Objects/String";
+								if (!tags) { // try array functions
+									tags = getTags(func,"Array");
+									func_class = "Global_Objects/Array";
+								}
+								if (!tags) { // try RegExp functions
+									tags = getTags(func,"RegExp");
+									func_class = "Global_Objects/RegExp";
+								}
+							}
+							break;
+						case "$.Deferred": // jQuery
+							tags = getTags(func,'jquery/deferred');
+							if (tags) {
+								func_class = "jQuery/"+func.name;
+								url = createJQueryUrl('deferred.'+func.name);
+							}
+							break;
+						default:
+							if (JS_CLASSES.indexOf(func.variable_type) >= 0) {
+								tags = getTags(func,func.variable_type);
+								func_class = "Global_Objects/"+func.variable_type;
+							}
+					}
+					break;
+				case "Math.": // Math functions
+					tags = getTags(func,"Math");
+					func_class = "Global_Objects/Math";
+					break;
+				case "RegExp.": // RegExp functions
+					tags = getTags(func,"RegExp");
+					func_class = "Global_Objects/RegExp";
+					break;
+				case "window.": // Window functions
+					tags = getTags(func,"window");
+					func_class = "API/Window";
+					url = 'https://developer.mozilla.org/en-US/docs/Web/API/Window.'+func.name;
+					break;
+				default:
+					tags = getTags(func,"Statements");
+					func_class = "Statements";
+					if (!tags) {
+						tags = getTags(func,"global");
+						func_class = "Global_Objects";
+					}
+					if (!tags) {
+						tags = getTags(func,"window");
+						func_class = "API/Window";
+						url = 'https://developer.mozilla.org/en-US/docs/Web/API/Window.'+func.name;
+					} 
+					if (!tags) {	
+						tags = getTags(func,'reactjs/component');
+						func_class = "component/"+func.variable;		
+						url  = (tags && "url" in tags) ? tags.url : false;
+					}
+			}
+			if (!tags) return false;
+			return {tags: tags, func_class: func_class, url: url};
 		}
     }
     

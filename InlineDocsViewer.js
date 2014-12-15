@@ -97,16 +97,21 @@ define(function (require, exports, module) {
         }
        
 
-		if (jsPropDetails.URL && jsPropDetails.URL.substr(0, "http://nodejs.org".length) === "http://nodejs.org") {
+		if (jsPropDetails.URL && jsPropDetails.URL.indexOf("http://nodejs.org") === 0) {
 			infoUrl 		= "http://nodejs.org";
 			infoUrlName 	= "NodeJS.org";
 			licenseUrl		= "https://raw.githubusercontent.com/joyent/node/v0.10.32/LICENSE";
 			licenseUrlName	= "NodeJS License";
-		} else if (jsPropDetails.URL && jsPropDetails.URL.substr(0, "http://api.jquery.com".length) === "http://api.jquery.com") {
+		} else if (jsPropDetails.URL && jsPropDetails.URL.indexOf("http://api.jquery.com") === 0) {
 			infoUrl 		= "https://api.jquery.com/";
 			infoUrlName 	= "jquery.com"
 			licenseUrl		= "http://en.wikipedia.org/wiki/MIT_License";
 			licenseUrlName	= "MIT License";
+		} else if (jsPropDetails.URL && jsPropDetails.URL.indexOf("http://facebook.github.io") === 0) {
+			infoUrl 		= "http://facebook.github.io/react/";
+			infoUrlName 	= "ReactJS";
+			licenseUrl		= "https://raw.githubusercontent.com/facebook/react/master/LICENSE";
+			licenseUrlName	= "BSD License";
 		} else {
 			infoUrl 		= "https://developer.mozilla.org/";
 			infoUrlName 	= "mozilla.org"
@@ -133,7 +138,9 @@ define(function (require, exports, module) {
         };
         
         var html = Mustache.render(inlineEditorTemplate, templateVars);
-        
+		console.log('html: '+html);
+		
+		
         this.$wrapperDiv = $(html);
         this.$htmlContent.append(this.$wrapperDiv);
         
@@ -156,6 +163,7 @@ define(function (require, exports, module) {
         this._handleWheelScroll     = this._handleWheelScroll.bind(this);
 
         this.$scroller = this.$wrapperDiv.find(".scroller");
+		console.log('wrapper: ',this.$wrapperDiv);
         this.$scroller.on("mousewheel", this._handleWheelScroll);
         this._onKeydown = this._onKeydown.bind(this);
 
@@ -268,6 +276,7 @@ define(function (require, exports, module) {
         $(window).on("resize", this._sizeEditorToContent);
 
         // Set focus
+		console.log(this.$scroller);
         this.$scroller[0].focus();
         this.$wrapperDiv[0].addEventListener("keydown", this._onKeydown, true);
     };
