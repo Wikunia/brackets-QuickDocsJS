@@ -71,15 +71,42 @@ define(function (require, exports, module) {
 			} else {
 				valueInfo.cssOptional = 'display:none;';
 			}
+			var propsForProps = false;
+			if ("pa" in valueInfo) {
+				propsForProps = valueInfo.pa.map(function (propsForValue) {
+					propsForValue.cssOptionalDefault = 'display:none;';
+					if (propsForValue.optional) {
+						if (propsForValue.default !== null && typeof propsForValue.default !== "undefined") {
+							propsForValue.default = 'Default: '+propsForValue.default;
+							propsForValue.cssOptionalDefault = 'display:inline;';
+						}
+						propsForValue.cssOptional = 'display:inline;';
+					} else {
+						propsForValue.cssOptional = 'display:none;';
+					}
+
+					return {
+						name: 					propsForValue.t,
+						description: 			parseJSDocs(propsForValue.d),
+						type: 					propsForValue.type,
+						default: 				propsForValue.default,
+						cssOptional: 			propsForValue.cssOptional,
+						cssOptionalDefault: 	propsForValue.cssOptionalDefault
+					};
+				});
+			}
+				
             return {
 				name: 					valueInfo.t,
 				description: 			parseJSDocs(valueInfo.d),
+				propsForProps:			propsForProps,
 				type: 					valueInfo.type,
 				default: 				valueInfo.default,
 				cssOptional: 			valueInfo.cssOptional,
 				cssOptionalDefault: 	valueInfo.cssOptionalDefault
 			};
         });
+		
 		var returnValues = [{description: parseJSDocs(jsPropDetails.RETURN.d), type: jsPropDetails.RETURN.type}];
 
         
@@ -96,7 +123,7 @@ define(function (require, exports, module) {
             return_style = 'display: none;';
         }
        
-
+		window.addEventListener
 		if (jsPropDetails.URL && jsPropDetails.URL.indexOf("http://nodejs.org") === 0) {
 			infoUrl 		= "http://nodejs.org";
 			infoUrlName 	= "NodeJS.org";
@@ -137,10 +164,7 @@ define(function (require, exports, module) {
 			licenseUrlName: licenseUrlName
         };
         
-        var html = Mustache.render(inlineEditorTemplate, templateVars);
-		console.log('html: '+html);
-		
-		
+        var html = Mustache.render(inlineEditorTemplate, templateVars);	
         this.$wrapperDiv = $(html);
         this.$htmlContent.append(this.$wrapperDiv);
         
@@ -163,7 +187,6 @@ define(function (require, exports, module) {
         this._handleWheelScroll     = this._handleWheelScroll.bind(this);
 
         this.$scroller = this.$wrapperDiv.find(".scroller");
-		console.log('wrapper: ',this.$wrapperDiv);
         this.$scroller.on("mousewheel", this._handleWheelScroll);
         this._onKeydown = this._onKeydown.bind(this);
 
@@ -276,7 +299,6 @@ define(function (require, exports, module) {
         $(window).on("resize", this._sizeEditorToContent);
 
         // Set focus
-		console.log(this.$scroller);
         this.$scroller[0].focus();
         this.$wrapperDiv[0].addEventListener("keydown", this._onKeydown, true);
     };

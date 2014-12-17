@@ -14,8 +14,8 @@
     </div>
     <div class="js-prop-values quiet-scrollbars">
         <div class="scroller" tabIndex="0"> <!-- tabIndex needed: otherwise can't be focused on open or via click -->
-             {{#propValues}}
             <dl>
+             {{#propValues}}
                 <dt>
 					<span class="optional bracket" style="{{cssOptional}}">[</span>
 						{{name}}
@@ -24,8 +24,20 @@
                 </dt>
                 <dd style="{{cssOptionalDefault}}" class="optional">{{default}}</dd>
                 <dd>{{{description}}}</dd>
-            </dl>
+				<dl class="propsForProps">
+					{{#propsForProps}}
+					<dt>
+						<span class="optional bracket" style="{{cssOptional}}">[</span>
+							{{name}}
+						<span class="optional bracket" style="{{cssOptional}}">]</span>
+						<span class="paramtype">{{type}}</span>
+					</dt>
+					<dd style="{{cssOptionalDefault}}" class="optional">{{default}}</dd>
+					<dd>{{{description}}}</dd>
+					{{/propsForProps}}
+				</dl>
             {{/propValues}}
+            </dl>
         </div>
     </div>
     <div class="content-bottom"></div>

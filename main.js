@@ -51,9 +51,8 @@ define(function(require, exports, module) {
         
         // get func.name and func.type ('.' or 'Math.')
         var func = get_func_name(currentDoc,sel.start,currentModDir);
-		console.log('func: ',func);
-		
-		
+		// console.log('func: ',func);
+				
         // if a function was selected
         if (func) {
 			func.nodeJS = false;
