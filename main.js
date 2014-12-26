@@ -804,132 +804,135 @@ define(function(require, exports, module) {
 		var multicomment 	= null;
         while (multicomment = regexComment.exec(content)) {
 			matches = regex.exec(multicomment[1]);
-			// matches[0] = all
-			// matches[2] = '''function_name''' or matches[4] if matches[2] undefined or matches[5] if both undefined
-			// get the function name
-			// start_pos
-			for (var i = 0; i < matches.length; i++) {
-				if (matches[i]) {
-					matches[i] = matches[i].trim();
+			if (matches) {
+				console.log('matches: ',matches);
+				// matches[0] = all
+				// matches[2] = '''function_name''' or matches[4] if matches[2] undefined or matches[5] if both undefined
+				// get the function name
+				// start_pos
+				for (var i = 0; i < matches.length; i++) {
+					if (matches[i]) {
+						matches[i] = matches[i].trim();
+					}
 				}
-			}
-			if (matches[2]) {
-				var match_func = matches[2].trim();
-			} else if (matches[4]) {
-				var match_func = matches[4].trim();	
-			} else if (matches[5]) {
-				var match_func = matches[5].trim();
-			}  else if (matches[7]) {
-				// prototype or static
-				if (matches[7] == func.variable_type && matches[8] == "prototype.") {
-					var match_func = matches[9];
-				} else if (matches[7] == func.variable && !matches[8]) {
-					var match_func = matches[9];
+				if (matches[2]) {
+					var match_func = matches[2].trim();
+				} else if (matches[4]) {
+					var match_func = matches[4].trim();	
+				} else if (matches[5]) {
+					var match_func = matches[5].trim();
+				}  else if (matches[7]) {
+					// prototype or static
+					if (matches[7] == func.variable_type && matches[8] == "prototype.") {
+						var match_func = matches[9];
+					} else if (matches[7] == func.variable && !matches[8]) {
+						var match_func = matches[9];
+					} else {
+						continue; // try next function
+					}
 				} else {
-					continue; // try next function
+					break;
 				}
-			} else {
-				break;
-			}
-			var end_func_name = match_func.search(/( |\(|$)/);
-			if (end_func_name >= 0) {
-				match_func = match_func.substring(0,end_func_name).trim();
-			}
-			if (match_func === func.name) {
-				var lines  = multicomment[0].split(/[\n\r]/);
-				// get the comment without * at the beginning of a line
-				var comment = '';
-				lines = lines.slice(1);  // without the / * * at the end /beginning
-				for (var i = 0; i < lines.length; i++) {
-					lines[i] = lines[i].trim(); // trim each line
-					if (lines[i].substr(0,2) == "*/") { lines = lines.slice(0,i); break; }
-					lines[i] = lines[i].replace(/^\*/,'').trim(); // delete * at the beginning and trim line again
+				var end_func_name = match_func.search(/( |\(|$)/);
+				if (end_func_name >= 0) {
+					match_func = match_func.substring(0,end_func_name).trim();
 				}
-				comment = lines.join('\n');
-				var commentTags = comment.split(/[\n]\s*@/);
+				if (match_func === func.name) {
+					var lines  = multicomment[0].split(/[\n\r]/);
+					// get the comment without * at the beginning of a line
+					var comment = '';
+					lines = lines.slice(1);  // without the / * * at the end /beginning
+					for (var i = 0; i < lines.length; i++) {
+						lines[i] = lines[i].trim(); // trim each line
+						if (lines[i].substr(0,2) == "*/") { lines = lines.slice(0,i); break; }
+						lines[i] = lines[i].replace(/^\*/,'').trim(); // delete * at the beginning and trim line again
+					}
+					comment = lines.join('\n');
+					var commentTags = comment.split(/[\n]\s*@/);
 
 
 
-				tags.s = commentTags[0].replace(/\r?\n/g, '<br />'); // the first (without @ is the description/summary)
-				tags.y = ''; // no syntax for userdefined functions
+					tags.s = commentTags[0].replace(/\r?\n/g, '<br />'); // the first (without @ is the description/summary)
+					tags.y = ''; // no syntax for userdefined functions
 
-				var params = [];
-				for (var i = 1; i < commentTags.length; i++) {
-					// get params
-					if (commentTags[i].substr(0,5) === 'param') {
-						var param_parts = commentTags[i].split(/(\s)+/);
+					var params = [];
+					for (var i = 1; i < commentTags.length; i++) {
+						// get params
+						if (commentTags[i].substr(0,5) === 'param') {
+							var param_parts = commentTags[i].split(/(\s)+/);
 
-						var param_type = '';
-						var delimiters = param_parts.filter(function(v,i) { return ((i % 2) === 1); });
-						param_parts = param_parts.filter(function(v,i) { return ((i % 2 === 0)); });
+							var param_type = '';
+							var delimiters = param_parts.filter(function(v,i) { return ((i % 2) === 1); });
+							param_parts = param_parts.filter(function(v,i) { return ((i % 2 === 0)); });
 
 
-						// 0 = param, 1 = title, 2-... = description
-						// 1,2 can be the type (inside {})
-						if (param_parts[2]) {
-							if (param_parts[1].substr(0,1) == '{' && param_parts[1].substr(-1) == '}') {
-								// type is part of the title
-								param_parts[1] = param_parts[1].substring(1,param_parts[1].length-1); // remove { }
-								var param_title = param_parts[2];
-								param_type = param_parts[1];
-								var description = param_parts[3];
-								var j_start = 4;
-							} else 	if (param_parts[2].substr(0,1) == '{' && param_parts[2].substr(-1) == '}') {
-								// type is part of the title
-								param_parts[2] = param_parts[2].substring(1,param_parts[2].length-1); // remove { }
-								var param_title = param_parts[1];
-								param_type = param_parts[2];
-								var description = param_parts[3];
-								var j_start = 4;
+							// 0 = param, 1 = title, 2-... = description
+							// 1,2 can be the type (inside {})
+							if (param_parts[2]) {
+								if (param_parts[1].substr(0,1) == '{' && param_parts[1].substr(-1) == '}') {
+									// type is part of the title
+									param_parts[1] = param_parts[1].substring(1,param_parts[1].length-1); // remove { }
+									var param_title = param_parts[2];
+									param_type = param_parts[1];
+									var description = param_parts[3];
+									var j_start = 4;
+								} else 	if (param_parts[2].substr(0,1) == '{' && param_parts[2].substr(-1) == '}') {
+									// type is part of the title
+									param_parts[2] = param_parts[2].substring(1,param_parts[2].length-1); // remove { }
+									var param_title = param_parts[1];
+									param_type = param_parts[2];
+									var description = param_parts[3];
+									var j_start = 4;
+								} else {
+									var param_title = param_parts[1]; 
+									var description = param_parts[2];
+									var j_start = 3;
+								}
+								for (var j = j_start; j < param_parts.length; j++) {
+									description += delimiters[j-1] + param_parts[j];
+								}
 							} else {
-								var param_title = param_parts[1]; 
-								var description = param_parts[2];
-								var j_start = 3;
+								var param_title = param_parts[1];
+								var description = '';	
 							}
-							for (var j = j_start; j < param_parts.length; j++) {
-								description += delimiters[j-1] + param_parts[j];
+							var optional = false;
+							var defaultValue;
+							// a param title can start with a [ and ends with ] => optional parameter
+							if (param_title.charAt(0) == '[' && param_title.charAt(param_title.length-1) == ']') {
+								optional = true;
+								param_title = param_title.substring(1,param_title.length-1);
+								var optional_parts = param_title.split('=');
+								if (optional_parts.length == 2) {
+									param_title = optional_parts[0];
+									defaultValue = optional_parts[1];
+								}
 							}
-						} else {
-							var param_title = param_parts[1];
-							var description = '';	
-						}
-						var optional = false;
-						var defaultValue;
-						// a param title can start with a [ and ends with ] => optional parameter
-						if (param_title.charAt(0) == '[' && param_title.charAt(param_title.length-1) == ']') {
-							optional = true;
-							param_title = param_title.substring(1,param_title.length-1);
-							var optional_parts = param_title.split('=');
-							if (optional_parts.length == 2) {
-								param_title = optional_parts[0];
-								defaultValue = optional_parts[1];
-							}
-						}
 
-						params.push({
-							't':param_title,
-							'd':(typeof description === "undefined") ? '' : description.replace(/\r?\n/g,'<br />'),
-							'type':param_type,
-							'optional':optional,'default':defaultValue
-						});
-					}
-					if (commentTags[i].substr(0,6) === 'return') {
-						if (commentTags[i].substr(0,7) === 'returns') {
-							var  return_tag = commentTags[i].substr(7).trim(); // delete returns and trim
-						} else {
-							var  return_tag = commentTags[i].substr(6).trim(); // delete return and trim
+							params.push({
+								't':param_title,
+								'd':(typeof description === "undefined") ? '' : description.replace(/\r?\n/g,'<br />'),
+								'type':param_type,
+								'optional':optional,'default':defaultValue
+							});
 						}
-						if(return_tag.charAt(0) == '{') {
-							var endCurly = return_tag.indexOf('}');
-							tags.r = {'d': return_tag.substr(endCurly+1),'type':return_tag.substring(1,endCurly)};
-						}else {
-							tags.r = return_tag;
+						if (commentTags[i].substr(0,6) === 'return') {
+							if (commentTags[i].substr(0,7) === 'returns') {
+								var  return_tag = commentTags[i].substr(7).trim(); // delete returns and trim
+							} else {
+								var  return_tag = commentTags[i].substr(6).trim(); // delete return and trim
+							}
+							if(return_tag.charAt(0) == '{') {
+								var endCurly = return_tag.indexOf('}');
+								tags.r = {'d': return_tag.substr(endCurly+1),'type':return_tag.substring(1,endCurly)};
+							}else {
+								tags.r = return_tag;
+							}
 						}
 					}
-				}
-				tags.p = params;
-				return tags;
-			 }
+					tags.p = params;
+					return tags;
+				 }
+			}
 		}
         return null;   
     }
