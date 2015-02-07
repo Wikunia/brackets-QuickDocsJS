@@ -9,6 +9,11 @@ QuickDocsJS makes it easy to read your JSDoc comments inline, but you have to wr
 
 ...Maybe you want to check out my [FuncDocr](https://github.com/Wikunia/brackets-FuncDocr) extension to generate JSDocs for your own functions.
 
+## You're rich?
+You don't need a second yacht and have some coins to spend? Here I am :)
+
+[![Flattr this git repo](http://api.flattr.com/button/flattr-badge-large.png)](https://flattr.com/submit/auto?user_id=Wikunia&url=https://github.com/Wikunia/brackets-QuickDocsJS&title=Brackets-QuickDocsJS&language=javascript&tags=github&category=software)
+
 ## Type Recognition Magic
 
 The extension tries to get the correct documentation if the function is available for strings and arrays.
