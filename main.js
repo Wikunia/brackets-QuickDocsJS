@@ -939,7 +939,7 @@ define(function(require, exports, module) {
    
 
 	/**
-	 * Get the content of a special modul
+	 * Get the content of a special module
 	 * For that iterate through all js files
 	 * @param   {String} moduleName name of the js module
 	 * @param   {String} moduleDir  module directory {@link findFunctionInProject}
@@ -978,7 +978,6 @@ define(function(require, exports, module) {
 
 	/**
 	 * Get the content of a special module name
-	 * For that iterate through all js files
 	 * @param file file by ProjectManager.getAllFiles
 	 * @param moduleName name of the js class
 	 * @return content The content of the php class file
@@ -988,12 +987,10 @@ define(function(require, exports, module) {
 		moduleName = moduleName.addSlashes();
 		if (file) {
 			if (file._isDirectory == false) {
-				if (file._name.substr(-3) == ".js") {
-					if (file._contents) {
-						result = file._contents;
-					} else {
-						result = getContentSync(file._path);
-					}
+				if (file._contents) {
+					result = file._contents;
+				} else {
+					result = getContentSync(file._path);
 				}
 			}
 		}
@@ -1046,7 +1043,6 @@ define(function(require, exports, module) {
 	  return this
 		.replace(/([^\\])\//g, '$1\\\/');
 	}
-
 
     
     EditorManager.registerInlineDocsProvider(inlineProvider); 
