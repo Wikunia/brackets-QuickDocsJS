@@ -203,7 +203,8 @@ define(function(require, exports, module) {
 				var syntax = tags.y.replace(/\n/g,'<br>');
 				// indent code if it has space(s) at the beginning of the line
 				syntax = syntax.replace(/<br>\s(.*?).(.*?)(<br>|$)/g,'<br><p style="margin:0 auto; text-indent:2em;">$2</p>');
-
+				syntax = syntax.replace(/<code>|<\/code>/g,'');
+				console.log('syntax: '+syntax);
 
 				// check if function has parameters
 				if (tags.p) {
@@ -788,6 +789,9 @@ define(function(require, exports, module) {
     * @return tags object
     */
     function get_userdefined_tags(content,func) {
+		console.log('content: ',content);
+		console.log('func: ',func);
+		
         var tags = new Object();
 		
 		// global is important for while!
@@ -803,6 +807,7 @@ define(function(require, exports, module) {
 		var matches 		= null;
 		var multicomment 	= null;
         while (multicomment = regexComment.exec(content)) {
+			console.log('multicomment: ',multicomment);
 			matches = regex.exec(multicomment[1]);
 			if (matches) {
 				console.log('matches: ',matches);
@@ -837,6 +842,7 @@ define(function(require, exports, module) {
 				if (end_func_name >= 0) {
 					match_func = match_func.substring(0,end_func_name).trim();
 				}
+				console.log('match_func: !'+match_func+'!');
 				if (match_func === func.name) {
 					var lines  = multicomment[0].split(/[\n\r]/);
 					// get the comment without * at the beginning of a line

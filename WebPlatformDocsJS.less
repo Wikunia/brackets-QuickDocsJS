@@ -235,10 +235,16 @@ a#js-info {
         a {
             color: @dark-bc-text-link;
         }
-
-        code {
-            color: @dark-bc-text;
-        }
+	
+		.syntax-code {
+			font-family: SourceCodePro;
+			font-size: 12px;
+			color: @dark-bc-text !important;
+			background-color: @dark-bc-highlight !important;
+			padding: 0 !important;
+			border: none !important;
+			white-space: normal;
+		}
 
         dl dt {
             color: @dark-bc-text;
