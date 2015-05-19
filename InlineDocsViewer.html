@@ -1,6 +1,29 @@
 <div class="js-prop-defn" tabIndex="0"> <!-- tabIndex needed: otherwise click focuses CodeMirror scroller and Esc won't work -->
     <div class="js-prop-summary">
-        <h1>{{propName}}</h1>
+        <span class="h1">{{propName}}</span>
+        <br>
+         {{#creationExtras}}
+            <span class="creationExtras">created:</span>
+            {{#createDate}}
+                <span class="createDate">{{createDate}}</span>
+            {{/createDate}}
+            {{#author}}
+                <span class="author">by {{author}}</span>
+            {{/author}}
+        {{/creationExtras}}
+        {{#modifiedExtras}}
+            <div class="clear"/>
+            <span class="modifiedExtras">modified:</span>
+            {{#lastmodifiedDate}}
+                <span class="lastmodifiedDate">{{lastmodifiedDate}}</span>
+            {{/lastmodifiedDate}}
+            {{#lastmodifiedBy}}
+                <span class="lastmodifiedBy">by {{lastmodifiedBy}}</span>
+            {{/lastmodifiedBy}}
+        {{/modifiedExtras}}
+        
+        <div class="clear"/>
+       
         <div>{{{summary}}}</div>
         <code class="syntax-code" style="{{SyntaxStyle}}"><br>{{{syntax}}}</code>
         <div style="{{ReturnStyle}}"><br>

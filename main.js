@@ -173,7 +173,7 @@ define(function(require, exports, module) {
 					result.resolve(tags);
 				} else {
 					result.reject();
-				}
+				}au
 			}).fail(function(errorCode) {
 				result.reject();
 			})
@@ -227,11 +227,15 @@ define(function(require, exports, module) {
 				} else {
 					tags.r = {};
 				}
+                
+                if (!tags.extras) {
+                    tags.extras = {};   
+                }
 
 				var inlineWidget = new InlineDocsViewer(
 									func.name,
 									{
-										SUMMARY:summary,SYNTAX: syntax,RETURN: tags.r, URL:url, VALUES:parameters
+										SUMMARY:summary,SYNTAX: syntax,RETURN: tags.r, EXTRAS: tags.extras, URL:url, VALUES:parameters
 									}
 								);
 				inlineWidget.load(hostEditor);
@@ -783,13 +787,16 @@ define(function(require, exports, module) {
 	}
 
 	/**
-    * user defined functions can documentated with JavaDoc
-    * @param content
-    * @param func       {object}  function (includs func.name)
-    * @return tags object
-    */
+	 * Description
+	 * @author Ole Kröger
+	 * @createDate 05/09/2015
+	 * @lastmodifiedDate 05/11/2015
+	 * @lastmodifiedBy Ole Kröger
+     * @param content
+     * @param func       {object}func.name)
+     * @return tags       object
+     */
     function get_userdefined_tags(content,func) {
-		console.log('content: ',content);
 		console.log('func: ',func);
 		
         var tags = new Object();
@@ -807,10 +814,8 @@ define(function(require, exports, module) {
 		var matches 		= null;
 		var multicomment 	= null;
         while (multicomment = regexComment.exec(content)) {
-			console.log('multicomment: ',multicomment);
 			matches = regex.exec(multicomment[1]);
 			if (matches) {
-				console.log('matches: ',matches);
 				// matches[0] = all
 				// matches[2] = '''function_name''' or matches[4] if matches[2] undefined or matches[5] if both undefined
 				// get the function name
@@ -842,7 +847,7 @@ define(function(require, exports, module) {
 				if (end_func_name >= 0) {
 					match_func = match_func.substring(0,end_func_name).trim();
 				}
-				console.log('match_func: !'+match_func+'!');
+                
 				if (match_func === func.name) {
 					var lines  = multicomment[0].split(/[\n\r]/);
 					// get the comment without * at the beginning of a line
@@ -855,16 +860,21 @@ define(function(require, exports, module) {
 					}
 					comment = lines.join('\n');
 					var commentTags = comment.split(/[\n]\s*@/);
-
-
+                    console.log('commentTags: ',commentTags);
 
 					tags.s = commentTags[0].replace(/\r?\n/g, '<br />'); // the first (without @ is the description/summary)
 					tags.y = ''; // no syntax for userdefined functions
 
 					var params = [];
+					var extras = {};
+                    var extraArguments = ['createDate','author','lastmodifiedDate','lastmodifiedBy'];
 					for (var i = 1; i < commentTags.length; i++) {
 						// get params
-						if (commentTags[i].substr(0,5) === 'param') {
+                        var firstSpace = commentTags[i].indexOf(' ');
+                        var argumentIndex = extraArguments.indexOf(commentTags[i].substr(0,firstSpace));
+                        if (argumentIndex >= 0) {
+                            extras[extraArguments[argumentIndex]] = commentTags[i].substr(firstSpace+1);        
+                        } else if (commentTags[i].substr(0,5) === 'param') {
 							var param_parts = commentTags[i].split(/(\s)+/);
 
 							var param_type = '';
@@ -920,8 +930,7 @@ define(function(require, exports, module) {
 								'type':param_type,
 								'optional':optional,'default':defaultValue
 							});
-						}
-						if (commentTags[i].substr(0,6) === 'return') {
+						} else if (commentTags[i].substr(0,6) === 'return') {
 							if (commentTags[i].substr(0,7) === 'returns') {
 								var  return_tag = commentTags[i].substr(7).trim(); // delete returns and trim
 							} else {
@@ -936,6 +945,8 @@ define(function(require, exports, module) {
 						}
 					}
 					tags.p = params;
+                    tags.extras = extras;
+                    console.log('tags: ',tags.extras);
 					return tags;
 				 }
 			}

@@ -54,7 +54,7 @@ define(function (require, exports, module) {
     
     /**
      * @param {!string} jsPropName
-     * @param {!{SUMMARY:string, SYNTAX:string, RETURN:string, URL:string, VALUES:Array.<{TITLE:string, DESCRIPTION:string}>}} jsPropDetails
+     * @param {!{SUMMARY:string, SYNTAX:string, RETURN:string, EXTRAS: Object, URL:string, VALUES:Array.<{TITLE:string, DESCRIPTION:string}>}} jsPropDetails
      */
     function InlineDocsViewer(jsPropName, jsPropDetails) {
         InlineWidget.call(this);
@@ -150,6 +150,12 @@ define(function (require, exports, module) {
         var templateVars = {
             propName      : jsPropName,
             summary       : parseJSDocs(jsPropDetails.SUMMARY),
+            creationExtras: ("author" in jsPropDetails.EXTRAS || "createDate" in jsPropDetails.EXTRAS) ? true : false,
+            modifiedExtras: ("lastmodifiedBy" in jsPropDetails.EXTRAS || "lastmodifiedDate" in jsPropDetails.EXTRAS) ? true : false,
+            author        : "author" in jsPropDetails.EXTRAS ? jsPropDetails.EXTRAS.author : "",
+            lastmodifiedBy : "lastmodifiedBy" in jsPropDetails.EXTRAS ? jsPropDetails.EXTRAS.lastmodifiedBy : "",
+            createDate  : "createDate" in jsPropDetails.EXTRAS ? jsPropDetails.EXTRAS.createDate : "",
+            lastmodifiedDate: "lastmodifiedDate" in jsPropDetails.EXTRAS ? jsPropDetails.EXTRAS.lastmodifiedDate : "",
             syntax        : jsPropDetails.SYNTAX,
             returnValues  : returnValues,
             propValues    : propValues,

@@ -223,19 +223,53 @@ a#js-info {
 @dark-bc-shadow-medium: rgba(0, 0, 0, 0.12);
 @dark-bc-input-bg: #555;
 @dark-bc-panel-separator: #343434;
+@dark-c-author: #336ecc;
+@dark-c-extras: #ddd;
 
 .dark {
     .js-prop-defn {
         color: @dark-bc-text-thin-quiet;
 
-        h1, b {
+        .h1, b {
             color: @dark-bc-text;
         }
-
+        
         a {
             color: @dark-bc-text-link;
         }
-	
+	   
+        .h1 {
+            font-size: 20px;
+        }
+        
+        .creationExtras {
+            padding-right: 13px;   
+        }
+        
+        .modifiedExtras {
+            padding-right: 5px;   
+        }
+        
+        .creationExtras,.modifiedExtras {
+            color: @dark-c-extras;
+        }
+        
+        .creationExtras,.modifiedExtras,.lastmodifiedDate,.lastmodifiedBy, .createDate, .author {
+            float: left;
+        }
+        
+        .clear {
+            clear: both;   
+        }
+        
+        .lastmodifiedDate,.createDate {
+            padding-right: 5px;
+        }
+        
+        .author, .lastmodifiedBy {
+            color: @dark-c-author;   
+        }
+        
 		.syntax-code {
 			font-family: SourceCodePro;
 			font-size: 12px;
