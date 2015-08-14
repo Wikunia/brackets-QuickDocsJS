@@ -204,7 +204,7 @@ define(function(require, exports, module) {
 				// indent code if it has space(s) at the beginning of the line
 				syntax = syntax.replace(/<br>\s(.*?).(.*?)(<br>|$)/g,'<br><p style="margin:0 auto; text-indent:2em;">$2</p>');
 				syntax = syntax.replace(/<code>|<\/code>/g,'');
-				console.log('syntax: '+syntax);
+//				console.log('syntax: '+syntax);
 
 				// check if function has parameters
 				if (tags.p) {
@@ -797,7 +797,7 @@ define(function(require, exports, module) {
      * @return tags       object
      */
     function get_userdefined_tags(content,func) {
-		console.log('func: ',func);
+//		console.log('func: ',func);
 		
         var tags = new Object();
 		
@@ -859,11 +859,16 @@ define(function(require, exports, module) {
 						lines[i] = lines[i].replace(/^\*/,'').trim(); // delete * at the beginning and trim line again
 					}
 					comment = lines.join('\n');
+//                    console.log('comment: !'+comment+'!');
 					var commentTags = comment.split(/[\n]\s*@/);
-                    console.log('commentTags: ',commentTags);
 
+                    if (commentTags[0].charAt(0) == '@') {
+                        commentTags.unshift('');  
+                        commentTags[1] = commentTags[1].substr(1); 
+                    }
 					tags.s = commentTags[0].replace(/\r?\n/g, '<br />'); // the first (without @ is the description/summary)
 					tags.y = ''; // no syntax for userdefined functions
+//                    console.log('commentTags: ',commentTags);
 
 					var params = [];
 					var extras = {};
@@ -946,7 +951,7 @@ define(function(require, exports, module) {
 					}
 					tags.p = params;
                     tags.extras = extras;
-                    console.log('tags: ',tags.extras);
+//                    console.log('tags: ',tags.extras);
 					return tags;
 				 }
 			}
