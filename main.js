@@ -1006,7 +1006,7 @@ define(function(require, exports, module) {
 	 */
 	function getModuleContentIterator(file,moduleName) {
 		var result = '';
-		moduleName = moduleName.addSlashes();
+		moduleName = addSlashes(moduleName);
 		if (file) {
 			if (file._isDirectory == false) {
 				if (file._contents) {
@@ -1061,8 +1061,8 @@ define(function(require, exports, module) {
         return s.split("").reverse().join("");
     }
 
-	String.prototype.addSlashes = function() {
-	  return this
+	function addSlashes(string) {
+	  return string
 		.replace(/([^\\])\//g, '$1\\\/');
 	}
 
