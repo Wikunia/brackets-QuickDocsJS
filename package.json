@@ -5,5 +5,5 @@
     "homepage": "https://github.com/Wikunia/brackets-QuickDocsJS",
     "version": "1.6.8",
     "engines": { "brackets": ">=0.23" },
-    "description": "Inline short documentation for JavaScript functions, including a summary,syntax and parameters. Docs for jQuery,NodeJS and some basic ReactJS functions."
+    "description": "Inline short documentation for JavaScript functions, including a summary, syntax and parameters. Docs for jQuery, NodeJS and some basic ReactJS functions."
 }
