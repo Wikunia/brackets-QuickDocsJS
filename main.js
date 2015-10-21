@@ -47,11 +47,11 @@ define(function(require, exports, module) {
             return null;
         }
         
-        var currentModDir = getcurrentModDiruleDir(docDir,currentDoc);
+        var currentModDir = getcurrentModDir(docDir,currentDoc);
         
         // get func.name and func.type ('.' or 'Math.')
         var func = get_func_name(currentDoc,sel.start,currentModDir);
-		// console.log('func: ',func);
+//        console.log('func: ',func);
 				
         // if a function was selected
         if (func) {
@@ -168,17 +168,35 @@ define(function(require, exports, module) {
 			var result = $.Deferred();
 			QuickOpenJS.findFunctionInProject(func.name).done(function(functionArray) {
 				var content = getContentSync(functionArray.document.file._path);
+                // check if there is a module.exports class for and add it to func.class
+                func = getJSClass(content,func);
 				var tags = get_userdefined_tags(content,func);
 				if (tags) {
 					result.resolve(tags);
 				} else {
 					result.reject();
-				}au
+				}
 			}).fail(function(errorCode) {
 				result.reject();
 			})
 			return result.promise();
 		}
+        
+        /**
+         * Get the class of a module.export = new Class();
+         * @param   {String} content content of a file
+         * @param   {Object} func    function object
+         * @returns {Object} updated function object (maybe .class is added)
+         */
+        function getJSClass(content,func) {
+            var regClass    = /module\.exports\s*=\s*new\s*(.*)\((.*?)\)/;
+		
+            var matches     = regClass.exec(content);
+            if (matches) {
+                func.class = matches[1];
+            }
+            return func;    
+        }
 
 		function tryJQuery(func) {
 			var tags = false;
@@ -797,7 +815,7 @@ define(function(require, exports, module) {
      * @return tags       object
      */
     function get_userdefined_tags(content,func) {
-//		console.log('func: ',func);
+//		console.log('get_userdefined_tags func: ',func);
 		
         var tags = new Object();
 		
@@ -813,9 +831,11 @@ define(function(require, exports, module) {
 	
 		var matches 		= null;
 		var multicomment 	= null;
+        var match_func      = null;
         while (multicomment = regexComment.exec(content)) {
 			matches = regex.exec(multicomment[1]);
 			if (matches) {
+//                console.log('matches: ',matches);
 				// matches[0] = all
 				// matches[2] = '''function_name''' or matches[4] if matches[2] undefined or matches[5] if both undefined
 				// get the function name
@@ -826,17 +846,18 @@ define(function(require, exports, module) {
 					}
 				}
 				if (matches[2]) {
-					var match_func = matches[2].trim();
+					match_func = matches[2].trim();
 				} else if (matches[4]) {
-					var match_func = matches[4].trim();	
+					match_func = matches[4].trim();	
 				} else if (matches[5]) {
-					var match_func = matches[5].trim();
+					match_func = matches[5].trim();
 				}  else if (matches[7]) {
 					// prototype or static
-					if (matches[7] == func.variable_type && matches[8] == "prototype.") {
-						var match_func = matches[9];
+					if ((matches[7] == func.variable_type || matches[7] == func.class) 
+                            && matches[8] == "prototype.") {
+						match_func = matches[9];
 					} else if (matches[7] == func.variable && !matches[8]) {
-						var match_func = matches[9];
+						match_func = matches[9];
 					} else {
 						continue; // try next function
 					}
@@ -847,7 +868,7 @@ define(function(require, exports, module) {
 				if (end_func_name >= 0) {
 					match_func = match_func.substring(0,end_func_name).trim();
 				}
-                
+//                console.log('match_func === func.name ?', match_func, func.name);
 				if (match_func === func.name) {
 					var lines  = multicomment[0].split(/[\n\r]/);
 					// get the comment without * at the beginning of a line
@@ -1040,7 +1061,7 @@ define(function(require, exports, module) {
 	 * @param {string} docDir current directory
 	 * @param {string} content content of the current file
 	 */
-	function getcurrentModDiruleDir(docDir,content) {
+	function getcurrentModDir(docDir,content) {
 		var match = /define\s*?\(\s*?'(.*?)'/gmi;
 		var matches = match.exec(content);
 
