@@ -36,6 +36,10 @@ define(function (require, exports, module) {
         InlineWidget        = brackets.getModule("editor/InlineWidget").InlineWidget,
         KeyEvent            = brackets.getModule("utils/KeyEvent"),
         NativeApp           = brackets.getModule("utils/NativeApp"),
+        Commands       		= brackets.getModule('command/Commands'),
+        EditorManager       = brackets.getModule('editor/EditorManager'),
+		MainViewManager     = brackets.getModule('view/MainViewManager'),
+        CommandManager		= brackets.getModule('command/CommandManager'),
         Strings             = brackets.getModule("strings"),
 		QuickOpenJS			= require('QuickOpenJS');
 
@@ -149,6 +153,9 @@ define(function (require, exports, module) {
 
         var templateVars = {
             propName      : jsPropName,
+            path          : jsPropDetails.path,
+            line          : jsPropDetails.line,
+            pos           : jsPropDetails.pos,
             summary       : parseJSDocs(jsPropDetails.SUMMARY),
             creationExtras: ("author" in jsPropDetails.EXTRAS || "createDate" in jsPropDetails.EXTRAS) ? true : false,
             modifiedExtras: ("lastmodifiedBy" in jsPropDetails.EXTRAS || "lastmodifiedDate" in jsPropDetails.EXTRAS) ? true : false,
@@ -201,6 +208,33 @@ define(function (require, exports, module) {
 			event.preventDefault();
 			var linkFunc = $(this).attr("href").substr(1);
 			QuickOpenJS.itemFocus(linkFunc);
+		});
+        
+        
+		this.$h1propName = this.$wrapperDiv.find("#h1-propName");
+		this.$h1propName.on('click', function(event) {
+			event.preventDefault();
+			var path = $(this).data("path");
+			var line = $(this).data("line");
+			var pos = $(this).data("pos");
+            _jumpToFile(path, {line: line, ch: pos});
+		});
+    }
+    
+    /**
+	 * Jump to a file and set the cursor position
+	 * @param {String} fullPath  path to the file
+	 * @param {Object} cursorPos cursor position (.line,.ch)
+	 */
+	function _jumpToFile(fullPath,cursorPos) {
+		CommandManager.execute( Commands.FILE_OPEN, { fullPath: fullPath } ).done( function() {
+			// Set focus on editor.
+			MainViewManager.focusActivePane();
+			EditorManager.getCurrentFullEditor().setCursorPos(
+				cursorPos.line,
+				cursorPos.ch,
+				true
+			);
 		});
     }
     

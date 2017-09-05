@@ -48,6 +48,7 @@ define(function(require, exports, module) {
         }
         
         var currentModDir = getcurrentModDir(docDir,currentDoc);
+//        console.log('currentModDir', currentModDir);
         
         // get func.name and func.type ('.' or 'Math.')
         var func = get_func_name(currentDoc,sel.start,currentModDir);
@@ -65,7 +66,8 @@ define(function(require, exports, module) {
 					func_class 	= jsTags.func_class;
 					url 		= jsTags.url;
 				}
-				
+//				console.log('jsTags', jsTags);
+                
 				// if tags for JS functions aren't available
 				if (!tags) {
 					// => check current document for user defined function
@@ -75,6 +77,7 @@ define(function(require, exports, module) {
 				} else if (typeof(url) === "undefined") {
 					url = true;
 				}
+//                console.log('tags: ', tags);
 				if (tags) {
 					if (tags.s != "" || tags.p) {
 						var inlineViewer = sendToInlineViewer(hostEditor,tags,func,url);
@@ -164,21 +167,59 @@ define(function(require, exports, module) {
 			return result;
 		}
 
+        function absolute(base, relative) {
+            var stack = base.split("/"),
+                parts = relative.split("/");
+            stack.pop(); // remove current file name (or empty string)
+                         // (omit if "base" is the current folder without trailing slash)
+            for (var i=0; i<parts.length; i++) {
+                if (parts[i] == ".")
+                    continue;
+                if (parts[i] == "..")
+                    stack.pop();
+                else
+                    stack.push(parts[i]);
+            }
+            return stack.join("/");
+        }   
+        
+        function getTagsUsingPath(path, func) {
+            var content = getContentSync(path);
+            // check if there is a module.exports class for and add it to func.class
+            func = getJSClass(content,func);
+//            console.log('getTagsUsingPath', func);
+            return get_userdefined_tags(content,func);
+        }
+        
 		function tryJSUtils(func) {
-			var result = $.Deferred();
-			QuickOpenJS.findFunctionInProject(func.name).done(function(functionArray) {
-				var content = getContentSync(functionArray.document.file._path);
-                // check if there is a module.exports class for and add it to func.class
-                func = getJSClass(content,func);
-				var tags = get_userdefined_tags(content,func);
-				if (tags) {
-					result.resolve(tags);
-				} else {
-					result.reject();
-				}
-			}).fail(function(errorCode) {
-				result.reject();
-			})
+            var result = $.Deferred();
+//            console.log('tryJSUtils', func);
+            var docDir = FileUtils.getDirectoryPath(hostEditor.document.file.fullPath);
+//            console.log('current dir: ', docDir);
+            if (func.variable_type) {
+                var path = absolute(docDir, func.variable_type);
+//                console.log('new path: ', path);
+//                console.log('func: ', func);
+                var tags = getTagsUsingPath(path, func);
+                if (tags) {
+                    tags.path = path;
+                    result.resolve(tags);
+                } else {
+                    result.reject();
+                }
+            } else {      
+                QuickOpenJS.findFunctionInProject(func.name).done(function(functionArray) {
+                    var tags = getTagsUsingPath(functionArray.document.file._path, func);
+                    tags.path = functionArray.document.file._path;
+                    if (tags) {
+                        result.resolve(tags);
+                    } else {
+                        result.reject();
+                    }
+                }).fail(function(errorCode) {
+                    result.reject();
+                })
+            }
 			return result.promise();
 		}
         
@@ -249,11 +290,24 @@ define(function(require, exports, module) {
                 if (!tags.extras) {
                     tags.extras = {};   
                 }
+                
+                if (!tags.path) {
+                    tags.path = "";   
+                }
+                
+                if (!tags.line) {
+                    tags.line = "";   
+                }
+                
+                if (!tags.pos) {
+                    tags.pos = "";   
+                }
 
 				var inlineWidget = new InlineDocsViewer(
 									func.name,
 									{
-										SUMMARY:summary,SYNTAX: syntax,RETURN: tags.r, EXTRAS: tags.extras, URL:url, VALUES:parameters
+										SUMMARY:summary,SYNTAX: syntax,RETURN: tags.r, EXTRAS: tags.extras, URL:url, VALUES:parameters,
+                                        path: tags.path, line: tags.line, pos: tags.pos
 									}
 								);
 				inlineWidget.load(hostEditor);
@@ -454,6 +508,27 @@ define(function(require, exports, module) {
         if (no_function_chars.indexOf(line_begin_rev.substr(b,1)) === -1 || b == line_begin_rev.length) {
             var func = new Object();
             func.name = line.substr(func_start_pos,func_name_length);
+            
+//            console.log('func name: ', func.name);
+//            console.log('line: ', line);
+            // check if "new" is directly in front of func.name => then check constructor function
+            if (line.substr(func_start_pos-4,3) == "new") {
+                var regex = /^(?:var\s+)?([a-zA-Z0-9_-]{1,})/;
+                var match = regex.exec(line);
+                if (match) {
+                    var var_name = match[1];
+                    func.variable = var_name;
+                    func.name = 'constructor';
+                    var varType = getVariableType(content,func.variable,pos,currentModDir);
+                    func.variable_type = varType.type;
+                    if (varType.mod) {
+                        func.mod = varType.mod;
+                    }
+//                    console.log('func', func);
+                    return func;
+                }
+            }
+            
 
             // check if function is like abc.substr or only like eval (no point)
             if (line_begin_rev.substr(b,1) == ".") {
@@ -558,6 +633,41 @@ define(function(require, exports, module) {
      * @returns {Object} (type of the variable: unknown,String,Array or RegExp, mod: modul name else '')
      */
     function getVariableType (content, variable,pos, currentModDir) {
+        // import check
+        var regex = new RegExp('import\\s+' + variable,'');
+        var match = regex.exec(content);
+        if (match) {
+            var pos = match.index;
+            // length of the match
+            var match_len = match[0].length;
+            
+            // get declaration value
+            // substr(pos).search(regex)+pos = indexOf(regex,pos)
+            var value = content.substr(pos+match_len,content.substr(pos+match_len).search(/[;,]/));
+            value = value.trim();
+//            console.log('value: ', value);
+            
+            // check for normal 'require' declaration i.e var variable = require('...')
+            var importRegex = /^\s*from\s+['"](.*?)['"]/;
+            var importName = importRegex.exec(value);
+//            console.log('importName: ', importName);
+            if (importName) {
+                importName = importName[1];
+                if (importName.substr(-3) != ".js") {
+                    importName += ".js";   
+                }
+                
+                var before = content.split("\n",pos.line);
+                var result = getModuleForVariable(content,before,importName);
+                if (result.mod) {
+                    return result;
+                } else {
+                    return {type:importName};
+                }
+            }
+        }
+        
+        
         // get the declaration for this variable 
         // can be a ',' between two declarations
         var regex = new RegExp('var (?:\\s*?|[^;]*?,\\s*?)' + variable + '\\s*?=','');
@@ -660,6 +770,7 @@ define(function(require, exports, module) {
 		if (requireName) {
 			var before = content.split("\n",pos.line);
 			var result = getModuleForVariable(content,before,requireName[1]);
+//            console.log('result', result);
 			if (result.mod) {
 				return result;
 			} else {
@@ -816,6 +927,7 @@ define(function(require, exports, module) {
      */
     function get_userdefined_tags(content,func) {
 //		console.log('get_userdefined_tags func: ',func);
+//		console.log('get_userdefined_tags content: ',content);
 		
         var tags = new Object();
 		
@@ -823,16 +935,22 @@ define(function(require, exports, module) {
 		var regexComment	 = /\/\*\*(?:[ \t]*)[\n\r](?:[\s\S]*?)\*\/([^{]*?)\{/g;
 	
 		var tabsLinesBetween = /^(?:[ \t<]*)[\n\r]*?(?:[ \t]*)/;
-		var functionDefs 	 = /(var (.*)=\s*(?:function(.*)|React.createClass\s*\((?:.*))|function (.*?)|(.*?):\s*?function(.*?)|([^.]*?)\.(prototype\.)?([^.]*?)\s*?=\s*?function(.*?))/;
+		var functionDefs 	 = /(([$A-Z_][0-9A-Z_$]*\s*\((?:.*?)\))\s*|var (.*)=\s*(?:function(.*)|React.createClass\s*\((?:.*))|function (.*?)|(.*?):\s*?function(.*?)|([^.]*?)\.(prototype\.)?([^.]*?)\s*?=\s*?function(.*?))/;
 		var end				 = /(\n|\r|$)/;
 		
 		// multiline,caseinsensitive
 		var regex = new RegExp(tabsLinesBetween.source + functionDefs.source + end.source , 'mi');
-	
+//	    console.log('regex: ',regex);
+        
 		var matches 		= null;
 		var multicomment 	= null;
         var match_func      = null;
+        var line = 0; 
         while (multicomment = regexComment.exec(content)) {
+            var content_before = content.substr(0,multicomment.index+multicomment[0].length);
+            line = content_before.split('\n').length;
+            
+            
 			matches = regex.exec(multicomment[1]);
 			if (matches) {
 //                console.log('matches: ',matches);
@@ -972,6 +1090,8 @@ define(function(require, exports, module) {
 					}
 					tags.p = params;
                     tags.extras = extras;
+                    tags.line = line;
+                    tags.pos = 0;
 //                    console.log('tags: ',tags.extras);
 					return tags;
 				 }

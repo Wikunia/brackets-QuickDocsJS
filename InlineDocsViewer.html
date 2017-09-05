@@ -1,6 +1,6 @@
 <div class="js-prop-defn" tabIndex="0"> <!-- tabIndex needed: otherwise click focuses CodeMirror scroller and Esc won't work -->
     <div class="js-prop-summary">
-        <span class="h1">{{propName}}</span>
+        <span class="h1" id="h1-propName" data-path="{{path}}" data-line="{{line}}" date-pos={{pos}} style="cursor: pointer;">{{propName}}</span>
         <br>
          {{#creationExtras}}
             <span class="creationExtras">created:</span>
