@@ -52,7 +52,7 @@ define(function(require, exports, module) {
         
         // get func.name and func.type ('.' or 'Math.')
         var func = get_func_name(currentDoc,sel.start,currentModDir);
-//        console.log('func: ',func);
+        console.log('func: ',func);
 				
         // if a function was selected
         if (func) {
@@ -519,6 +519,7 @@ define(function(require, exports, module) {
                     var var_name = match[1];
                     func.variable = var_name;
                     func.name = 'constructor';
+                    func.type = '.';
                     var varType = getVariableType(content,func.variable,pos,currentModDir);
                     func.variable_type = varType.type;
                     if (varType.mod) {

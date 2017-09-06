@@ -23,7 +23,7 @@
 
 
 /*jslint vars: true, plusplus: true, devel: true, nomen: true, indent: 4, maxerr: 50 */
-/*global define, brackets, $, window, Mustache */
+/*global define, brackets, $, window */
 
 /**
  * Inline widget to display WebPlatformDocs JSON data nicely formatted
@@ -41,6 +41,7 @@ define(function (require, exports, module) {
 		MainViewManager     = brackets.getModule('view/MainViewManager'),
         CommandManager		= brackets.getModule('command/CommandManager'),
         Strings             = brackets.getModule("strings"),
+        Mustache            = brackets.getModule("thirdparty/mustache/mustache"),
 		QuickOpenJS			= require('QuickOpenJS');
 
     
